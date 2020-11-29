@@ -7,12 +7,17 @@ generators_folder_name="generators"
 solution_folder_name="solution"
 bin_folder_name="bin"
 
-# Inputs form the user
-contest_id=$1
-problem_id=$2
-language=$3
+# Usage:
+# bash scripts/generate-template.sh codechef NOV20A RESTORE py
+# bash scripts/generate-template.sh codeforces 1452 C cpp
 
-contest_folder="$problems_base_folder_name/$contest_id"
+# Inputs form the user
+platform=$1
+contest_id=$2
+problem_id=$3
+language=$4
+
+contest_folder="$platform/$problems_base_folder_name/$contest_id"
 problem_folder="$contest_folder/$problem_id"
 input_folder="$problem_folder/$input_folder_name"
 output_folder="$problem_folder/$output_folder_name"
