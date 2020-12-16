@@ -1,2 +1,2 @@
-# codeforces
-Solutions to codeforces contests
+# competitive-coding
+Solutions to programming contests and problems
