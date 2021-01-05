@@ -267,4 +267,5 @@ int main() {
   solve();
   verify_solution();
   print_solution();
+  return 0;
 }
