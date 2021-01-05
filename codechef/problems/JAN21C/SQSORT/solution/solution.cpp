@@ -48,7 +48,7 @@ int secondary_container = 1;
 void input();
 void verify_solution();
 void print_solution();
-
+void print_containers();
 /**
  * Sorts the containers based on the heuristic of the smalled C[i] + D[i] for each container.
  */
@@ -316,21 +316,21 @@ void transfer_blocks_to_respective_containers() {
 void sort_containers() {
   primary_container = container[primary_container].size() == 0 ? primary_container : secondary_container;
   assert(container[primary_container].size() == 0);
-  int total = 1;
+  int total = 0;
   while(total < B) {
-    for (int i = 0; i < get_useful_containers(); i++) {
-      int container_index = container_index_mapping[i];
-      if (container[container_index].size() > 0) {
-        int block = container[container_index].front();
-        assert(block == total);
+    for (int i = 0; i < N; i++) {
+      if (i == primary_container) continue;
+      if (container[i].size() > 0) {
+        int block = container[i].front();
+        assert(block == total + 1);
         container[primary_container].push(block);
-        container[container_index].pop();
+        container[i].pop();
         /**
          * Add it to the solution.
          */
         solution.push_back(
           make_pair(
-            container_index, primary_container
+            i, primary_container
           )
         );
         total += 1;
@@ -351,7 +351,7 @@ void solve() {
 int main() {
   input();
   solve();
-  verify_solution();
+  // verify_solution();
   print_solution();
   return 0;
 }
@@ -425,5 +425,13 @@ void print_solution() {
   for (auto move: solution) {
     printf("%d %d\n", move.first + 1, move.second + 1);
   }
-  fflush(stdout);
+}
+
+void print_containers() {
+  for(int i = 0; i < N; i++) {
+    debug("Container %d \n", i);
+    if (container[i].size() > 0) {
+      debug("Front is %d\n", container[i].front());
+    }
+  }
 }
