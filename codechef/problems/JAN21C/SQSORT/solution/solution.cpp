@@ -36,6 +36,7 @@ int initial_empty_container = 1;
  */
 void input();
 void verify_solution();
+void print_solution();
 
 /**
  * Gets the next best container looking at the C[i] and D[i] values
@@ -100,7 +101,7 @@ void decide_empty_full_queues() {
 /**
  * Transfer all the blocks to the zeroth queue
  */
-void transfer_to_initial_full_queue() {
+void transfer_to_initial_full_container() {
   int total = container[initial_full_container].size();
   while(total != B) {
     int mins = INFINITY, min_index = -1;
@@ -222,22 +223,9 @@ void sort_the_queues() {
   assert(container[empty_queue].size() == B);
 }
 
-
-
-void print_solution() {
-  for (int i = 0; i < N; i++) {
-    printf("Q");
-  }
-  printf("\n");
-  printf("%lu\n", solution.size());
-  for (auto move: solution) {
-    printf("%d %d\n", move.first + 1, move.second + 1);
-  }
-}
-
 void solve() {
   decide_empty_full_queues();
-  transfer_to_initial_full_queue();
+  transfer_to_initial_full_container();
   distribute_evenly();
   sort_the_queues();
 }
@@ -308,4 +296,15 @@ void verify_solution() {
     i += 1;
   }
   assert(i == B + 1); // Assert that the last element that we saw was B
+}
+
+void print_solution() {
+  for (int i = 0; i < N; i++) {
+    printf("Q");
+  }
+  printf("\n");
+  printf("%lu\n", solution.size());
+  for (auto move: solution) {
+    printf("%d %d\n", move.first + 1, move.second + 1);
+  }
 }
