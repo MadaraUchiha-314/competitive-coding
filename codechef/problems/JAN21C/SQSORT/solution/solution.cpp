@@ -56,12 +56,8 @@ int get_min_not_at_index(int index) {
   int min_index = -1;
   for (int i = 0; i < N; i++) {
     if (i != index) {
-      if (C[i] < mins) {
-        mins = C[i];
-        min_index = i;
-      }
-      if (D[i] < mins) {
-        mins = D[i];
+      if (C[i] + D[i] < mins) {
+        mins = C[i] + D[i];
         min_index = i;
       }
     }
@@ -71,9 +67,7 @@ int get_min_not_at_index(int index) {
 }
 
 void decide_empty_full_queues() {
-  if (block_queues[0].size() != B) {
-    INITIAL_FULL_QUEUE = get_min_not_at_index(-1);
-  }
+  INITIAL_FULL_QUEUE = get_min_not_at_index(-1);
   INITIAL_EMPTY_QUEUE = get_min_not_at_index(INITIAL_FULL_QUEUE);
   assert(INITIAL_FULL_QUEUE != INITIAL_EMPTY_QUEUE);
 }
