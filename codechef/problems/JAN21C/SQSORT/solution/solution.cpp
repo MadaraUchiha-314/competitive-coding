@@ -126,9 +126,9 @@ void distribute_evenly() {
       int block = block_queues[full_queue].front(); // The current element which is being processed
       int queue_bucket = (block - 1) % K; // The bucket in which it falls
       int queue_index = queue_bucket;
-      queue_index += queue_index >= full_queue ? 1 : 0;
-      queue_index += queue_index >= empty_queue ? 1 : 0;
-      assert(queue_index < N);
+
+      queue_index += queue_index >= min(empty_queue, full_queue) ? 1 : 0;
+      queue_index += queue_index >= max(empty_queue, full_queue) ? 1 : 0;
       /**
        * There are 2 scenarios.
        * The element is the first element to be inserted into the respective queue
@@ -198,10 +198,12 @@ void sort_the_queues() {
 
 void verify_solution() {
   // Assert that the solution size is also withing bounds
-  assert(solution.size() <= (B * B) / 2);
+  assert(B < 1024 || solution.size() <= (B * B) / 2);
   // Doing the same operations as given in the solution in the copy queues that we have made
   for (auto move: solution) {
-    assert(move.first < N && move.second < N);
+    assert((move.first < N) && (move.second < N));
+    // You cannot push and pop to the same container. Verify this you idiot.
+    assert(move.first != move.second);
     // Asserting we are not popping from an empty queue.
     assert(copy_queue[move.first].size() > 0);
     copy_queue[move.second].push(
@@ -234,14 +236,6 @@ void verify_solution() {
   }
   // Assert that the last element that we saw was B
   assert(i == B + 1);
-}
-
-void print_queue_sizes() {
-  debug("======\n");
-  for (int i = 0; i < N; i++) {
-    debug("Size of Queue %d is %lu and front is %d and back is %d\n", i, block_queues[i].size(), block_queues[i].size() > 0 ? block_queues[i].front() : 0, block_queues[i].size() > 0 ? block_queues[i].back() : 0);
-  }
-  debug("======\n");
 }
 
 void print_solution() {
