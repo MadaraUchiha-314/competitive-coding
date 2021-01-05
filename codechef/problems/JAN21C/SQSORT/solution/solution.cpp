@@ -69,6 +69,26 @@ int get_min_not_at_index(int index) {
 void decide_empty_full_queues() {
   INITIAL_FULL_QUEUE = get_min_not_at_index(-1);
   INITIAL_EMPTY_QUEUE = get_min_not_at_index(INITIAL_FULL_QUEUE);
+  int sum_full_queue = 0;
+  int sum_empty_queue = 0;
+
+  for (int i = 0; i < block_queues[INITIAL_FULL_QUEUE].size(); i++) {
+    sum_full_queue += block_queues[INITIAL_FULL_QUEUE].front();
+     block_queues[INITIAL_FULL_QUEUE].push(block_queues[INITIAL_FULL_QUEUE].front());
+     block_queues[INITIAL_FULL_QUEUE].pop();
+  }
+
+  for (int i = 0; i < block_queues[INITIAL_EMPTY_QUEUE].size(); i++) {
+    sum_empty_queue += block_queues[INITIAL_EMPTY_QUEUE].front();
+     block_queues[INITIAL_EMPTY_QUEUE].push(block_queues[INITIAL_EMPTY_QUEUE].front());
+     block_queues[INITIAL_EMPTY_QUEUE].pop();
+  }
+  if (
+    (sum_empty_queue * (C[INITIAL_EMPTY_QUEUE] + D[INITIAL_FULL_QUEUE])) >
+    (sum_full_queue * (C[INITIAL_FULL_QUEUE] + D[INITIAL_EMPTY_QUEUE]))
+  ) {
+    swap(INITIAL_EMPTY_QUEUE, INITIAL_FULL_QUEUE);
+  }
   assert(INITIAL_FULL_QUEUE != INITIAL_EMPTY_QUEUE);
 }
 
