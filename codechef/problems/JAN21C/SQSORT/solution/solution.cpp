@@ -14,23 +14,36 @@ using namespace std;
   #define debug(...) 1 == 1
 #endif
 
+const int INFINITY = 1 << 30;
+const int MAX_CONTAINERS = 128;
+const int MAX_BLOCKS = 1024;
+
 // Variables for the problem
 int N, B;
-int C[128], D[128], W[1024];
-int A[128][1024];
+int C[MAX_CONTAINERS], D[MAX_CONTAINERS], W[MAX_BLOCKS];
+int A[MAX_CONTAINERS][MAX_BLOCKS];
 
 // Variables for the solution
-queue<int> block_queues[128];
-queue<int> copy_queue[128];
+queue<int> container[MAX_CONTAINERS];
+queue<int> container_init_state[MAX_CONTAINERS];
 vector<pair<int, int> > solution;
 
-int INITIAL_FULL_QUEUE = 0;
-int INITIAL_EMPTY_QUEUE = 1;
+int initial_full_container = 0;
+int initial_empty_container = 1;
 
+/**
+ * Forward declaration of stuff.
+ */
 void input();
+void verify_solution();
 
-int get_min_not_at_index(int index) {
-  int mins = 1 << 20;
+/**
+ * Gets the next best container looking at the C[i] and D[i] values
+ * @param index The index to ignore while choosing.
+ * @return The index of the next best container.
+ */
+int get_next_best_container(int index) {
+  int mins = INFINITY;
   int min_index = -1;
   for (int i = 0; i < N; i++) {
     if (i != index) {
@@ -40,57 +53,71 @@ int get_min_not_at_index(int index) {
       }
     }
   }
-  assert(min_index > -1);
   return min_index;
 }
 
+/**
+ * Decides which containers will the working containers.
+ * We need to 2 containers to alternatively push and pop the blocks.
+ */
 void decide_empty_full_queues() {
-  INITIAL_FULL_QUEUE = get_min_not_at_index(-1);
-  INITIAL_EMPTY_QUEUE = get_min_not_at_index(INITIAL_FULL_QUEUE);
+  /**
+   * Choose the best 2 containers based on C[i] and D[i] values.
+   */
+  initial_full_container = get_next_best_container(-1);
+  initial_empty_container = get_next_best_container(initial_full_container);
+
+
+  /**
+   * Out of these two containers, which one do we want to be the initial full container ?
+   * We decide that on the basis of the for the container i the heuristic that we use is, C[i] * sum(W[j]) for all j in that container initially
+   * Based on the above heuristic, we swap the containers if necessary
+   */
   int sum_full_queue = 0;
   int sum_empty_queue = 0;
 
-  for (int i = 0; i < block_queues[INITIAL_FULL_QUEUE].size(); i++) {
-    sum_full_queue += block_queues[INITIAL_FULL_QUEUE].front();
-     block_queues[INITIAL_FULL_QUEUE].push(block_queues[INITIAL_FULL_QUEUE].front());
-     block_queues[INITIAL_FULL_QUEUE].pop();
+  for (int i = 0; i < container[initial_full_container].size(); i++) {
+    sum_full_queue += container[initial_full_container].front();
+     container[initial_full_container].push(container[initial_full_container].front());
+     container[initial_full_container].pop();
   }
 
-  for (int i = 0; i < block_queues[INITIAL_EMPTY_QUEUE].size(); i++) {
-    sum_empty_queue += block_queues[INITIAL_EMPTY_QUEUE].front();
-     block_queues[INITIAL_EMPTY_QUEUE].push(block_queues[INITIAL_EMPTY_QUEUE].front());
-     block_queues[INITIAL_EMPTY_QUEUE].pop();
+  for (int i = 0; i < container[initial_empty_container].size(); i++) {
+    sum_empty_queue += container[initial_empty_container].front();
+     container[initial_empty_container].push(container[initial_empty_container].front());
+     container[initial_empty_container].pop();
   }
+
   if (
-    (sum_empty_queue * (C[INITIAL_EMPTY_QUEUE] + D[INITIAL_FULL_QUEUE])) >
-    (sum_full_queue * (C[INITIAL_FULL_QUEUE] + D[INITIAL_EMPTY_QUEUE]))
+    (sum_empty_queue * (C[initial_empty_container] + D[initial_full_container])) >
+    (sum_full_queue * (C[initial_full_container] + D[initial_empty_container]))
   ) {
-    swap(INITIAL_EMPTY_QUEUE, INITIAL_FULL_QUEUE);
+    swap(initial_empty_container, initial_full_container);
   }
-  assert(INITIAL_FULL_QUEUE != INITIAL_EMPTY_QUEUE);
+  assert(initial_full_container != initial_empty_container);
 }
 
 /**
  * Transfer all the blocks to the zeroth queue
  */
 void transfer_to_initial_full_queue() {
-  int total = block_queues[INITIAL_FULL_QUEUE].size();
+  int total = container[initial_full_container].size();
   while(total != B) {
-    int mins = 1 << 20, min_index = -1;
+    int mins = INFINITY, min_index = -1;
     for (int i = 0; i < N; i++) {
-      if (i == INITIAL_FULL_QUEUE) continue;
-      if (block_queues[i].size() > 0 && block_queues[i].front() < mins) {
-        mins = block_queues[i].front();
+      if (i == initial_full_container) continue;
+      if (container[i].size() > 0 && container[i].front() < mins) {
+        mins = container[i].front();
         min_index = i;
       }
     }
-    block_queues[INITIAL_FULL_QUEUE].push(
-      block_queues[min_index].front()
+    container[initial_full_container].push(
+      container[min_index].front()
     );
-    block_queues[min_index].pop();
+    container[min_index].pop();
     solution.push_back(
       make_pair(
-        min_index, INITIAL_FULL_QUEUE
+        min_index, initial_full_container
       )
     );
     total += 1;
@@ -98,12 +125,12 @@ void transfer_to_initial_full_queue() {
   /**
    * We assert that all elements have been transferred to the 0th queue.
    */
-  assert(block_queues[INITIAL_FULL_QUEUE].size() == B);
+  assert(container[initial_full_container].size() == B);
 }
 
 void distribute_evenly() {
-  int full_queue = INITIAL_FULL_QUEUE;
-  int empty_queue = INITIAL_EMPTY_QUEUE;
+  int full_queue = initial_full_container;
+  int empty_queue = initial_empty_container;
   /**
    * We have the zeroth queue as the full queue.
    * We have the first queue as the buffer.
@@ -115,14 +142,14 @@ void distribute_evenly() {
   /**
    * We have to keep doing this until all our elements are put into their respective queues.
    */
-  while (block_queues[full_queue].size() != 0) {
+  while (container[full_queue].size() != 0) {
     /**
      * Each iteration goes through all the elements in the full queue.
      * In every iteration below atleast K elements will be processed.
      * More elements may be processed if the elements appear in ascending order. But that's for later.
      */
-    while(block_queues[full_queue].size() != 0) {
-      int block = block_queues[full_queue].front(); // The current element which is being processed
+    while(container[full_queue].size() != 0) {
+      int block = container[full_queue].front(); // The current element which is being processed
       int queue_bucket = (block - 1) % K; // The bucket in which it falls
       int queue_index = queue_bucket;
 
@@ -134,40 +161,40 @@ void distribute_evenly() {
        * The element is K + the previous element in the respective queue
        */
       if (
-        (block_queues[queue_index].size() == 0 && block == queue_bucket + 1)
-        || (block_queues[queue_index].size() > 0 && block == block_queues[queue_index].back() + K)
+        (container[queue_index].size() == 0 && block == queue_bucket + 1)
+        || (container[queue_index].size() > 0 && block == container[queue_index].back() + K)
       ) {
-        block_queues[queue_index].push(block);
+        container[queue_index].push(block);
         solution.push_back(
           make_pair(
             full_queue, queue_index
           )
         );
       } else {
-        block_queues[empty_queue].push(block);
+        container[empty_queue].push(block);
         solution.push_back(
           make_pair(
             full_queue, empty_queue
           )
         );
       }
-      block_queues[full_queue].pop();
+      container[full_queue].pop();
     }
     swap(empty_queue, full_queue);
   }
   /**
    * At the end of the process, both INITIAL queues must be empty.
    */
-  assert(block_queues[INITIAL_FULL_QUEUE].size() == 0 && block_queues[INITIAL_EMPTY_QUEUE].size() == 0);
+  assert(container[initial_full_container].size() == 0 && container[initial_empty_container].size() == 0);
 }
 
 /**
  * Sort all the queue back to the empty queue.
  */
 void sort_the_queues() {
-  assert(block_queues[INITIAL_EMPTY_QUEUE].size() == 0);
-  assert(block_queues[INITIAL_FULL_QUEUE].size() == 0);
-  int empty_queue = INITIAL_FULL_QUEUE;
+  assert(container[initial_empty_container].size() == 0);
+  assert(container[initial_full_container].size() == 0);
+  int empty_queue = initial_full_container;
   int total = 0;
   /**
    * We need to add all the blocks to the solution.
@@ -178,10 +205,10 @@ void sort_the_queues() {
      */
     for (int i = 0; i < N; i++) {
       if (i == empty_queue) continue;
-      if (block_queues[i].size() != 0) {
-        block_queues[empty_queue].push(block_queues[i].front()); // Add it to the empty queue
-        assert(block_queues[i].front() == total + 1);
-        block_queues[i].pop(); // Remove it from the current queue
+      if (container[i].size() != 0) {
+        container[empty_queue].push(container[i].front()); // Add it to the empty queue
+        assert(container[i].front() == total + 1);
+        container[i].pop(); // Remove it from the current queue
         // Add it to the solution
         solution.push_back(
           make_pair(
@@ -192,50 +219,10 @@ void sort_the_queues() {
       }
     }
   }
-  assert(block_queues[empty_queue].size() == B);
+  assert(container[empty_queue].size() == B);
 }
 
-void verify_solution() {
-  // Assert that the solution size is also withing bounds
-  assert(B < 1024 || solution.size() <= (B * B) / 2);
-  // Doing the same operations as given in the solution in the copy queues that we have made
-  for (auto move: solution) {
-    assert((move.first < N) && (move.second < N));
-    // You cannot push and pop to the same container. Verify this you idiot.
-    assert(move.first != move.second);
-    // Asserting we are not popping from an empty queue.
-    assert(copy_queue[move.first].size() > 0);
-    copy_queue[move.second].push(
-      copy_queue[move.first].front()
-    );
-    copy_queue[move.first].pop();
-  }
-  // Now that we have done the Q operations, then we verify that it yielded that solution that we wanted
-  int full_queue = -1;
-  int num_empty_queue = 0;
-  for (int i = 0; i < N; i++) {
-    if (block_queues[i].size() != 0) {
-      full_queue = i;
-    } else {
-      num_empty_queue += 1;
-    }
-  }
-  // At the end, there should be atleast one full queue
-  assert(full_queue != -1);
-  // At the end there should be exactly N - 1 empty queues
-  assert(num_empty_queue == N - 1);
-  // The full queue should contain exactly B elements
-  assert(copy_queue[full_queue].size() == B);
-  // The B elements in the queue should be in sorted order from 1 to B
-  int i = 1;
-  while(copy_queue[full_queue].size() != 0) {
-    assert(copy_queue[full_queue].front() == i);
-    copy_queue[full_queue].pop();
-    i += 1;
-  }
-  // Assert that the last element that we saw was B
-  assert(i == B + 1);
-}
+
 
 void print_solution() {
   for (int i = 0; i < N; i++) {
@@ -282,8 +269,43 @@ void input() {
     scanf("%d", &M);
     for (int j = 0; j < M; j++) {
       scanf("%d", &A[i][j]);
-      block_queues[i].push(A[i][j]);
-      copy_queue[i].push(A[i][j]);
+      container[i].push(A[i][j]);
+      container_init_state[i].push(A[i][j]);
     }
   }
+}
+
+void verify_solution() {
+  assert(B < 1024 || solution.size() <= (B * B) / 2); // Assert that the solution size is also withing bounds
+  // Doing the same operations as given in the solution in the copy queues that we have made
+  for (auto move: solution) {
+    assert((move.first < N) && (move.second < N)); // Valid container indices
+    assert(move.first != move.second); // You cannot push and pop to the same container. Verify this you idiot.
+    assert(container_init_state[move.first].size() > 0);   // Asserting we are not popping from an empty queue.
+    container_init_state[move.second].push(
+      container_init_state[move.first].front()
+    );
+    container_init_state[move.first].pop();
+  }
+  // Now that we have done the Q operations, then we verify that it yielded that solution that we wanted
+  int full_queue = -1;
+  int num_empty_queue = 0;
+  for (int i = 0; i < N; i++) {
+    if (container[i].size() != 0) {
+      full_queue = i;
+    } else {
+      num_empty_queue += 1;
+    }
+  }
+  assert(full_queue != -1); // At the end, there should be atleast one full queue
+  assert(num_empty_queue == N - 1); // At the end there should be exactly N - 1 empty queues
+  assert(container_init_state[full_queue].size() == B); // The full queue should contain exactly B elements
+  // The B elements in the queue should be in sorted order from 1 to B
+  int i = 1;
+  while(container_init_state[full_queue].size() != 0) {
+    assert(container_init_state[full_queue].front() == i);
+    container_init_state[full_queue].pop();
+    i += 1;
+  }
+  assert(i == B + 1); // Assert that the last element that we saw was B
 }
