@@ -7,7 +7,7 @@
 #include <utility>
 using namespace std;
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
   #define debug printf
@@ -31,6 +31,7 @@ vector<pair<int ,int> > sorted_containers;
 vector<int> buffer_containers;
 int used_containers[MAX_CONTAINERS];
 vector<pair<int, int> > solution;
+int container_index_mapping[MAX_CONTAINERS];
 
 /**
  * Buffer container is a container where we keep our "inactive" blocks which which come into the picture only during latter iterations.
@@ -82,24 +83,42 @@ void choose_fixed_containers() {
     buffer_containers.push_back(sorted_containers[i + 2].second);
     used_containers[sorted_containers[i + 2].second] = 1; // Mark as used
   }
-  debug("Buffer containers are: \n");
-  for (auto container: buffer_containers) {
-    debug("%d ", container);
-  }
-  debug("\n");
 }
 
-bool is_elibigle_for_buffer_container(int block) {
-  debug("Block %d eligibility %d\n", block, block > (B / (num_buffer_containers + 1)));
+inline bool is_elibigle_for_buffer_container(int block) {
   return block > (B / (num_buffer_containers + 1));
 }
 
-int get_buffer_container_for_block(int block) {
+inline int get_buffer_container_for_block(int block) {
   int total_capacity = B / (num_buffer_containers + 1);
   int buffer_container_index = (block - 1)/ total_capacity;
-  debug("Buffer container index %d\n", buffer_container_index);
-  fflush(stdout);
   return buffer_containers[buffer_container_index - 1];
+}
+
+inline int get_useful_containers() {
+  return N - (int)buffer_containers.size() - 2;
+}
+
+inline int get_container_for_block(int block) {
+  int total_usable_containers = get_useful_containers();
+  int container_index = (block - 1) % total_usable_containers;
+  return container_index_mapping[container_index];
+}
+
+inline int first_element_in_container_for_block(int block) {
+  return ((block - 1) % get_useful_containers()) + 1;
+}
+
+void determine_container_index_mapping() {
+  int last_used = -1;
+  for(int i = 0; i < N; i++) {
+    int j = i;
+    while(j <= last_used || used_containers[j] == 1) {
+      j += 1;
+    }
+    container_index_mapping[i] = j;
+    last_used = j;
+  }
 }
 
 /**
@@ -107,20 +126,13 @@ int get_buffer_container_for_block(int block) {
  * 1. primary_container
  * 2. One of the buffer_containers based on the value of the block.
  */
-void transfer_blocks_to_containers() {
-  /**
-   * We determine the upper limit for the working group.
-   * The rest of the blocks will go to one of the buffer containers.
-   */
-  int working_block_upper_limit = B / (num_buffer_containers + 1);
+void transfer_blocks_to_initial_containers() {
   /**
    * Before we do all the transfer.
    * We can transfer temporarily inactive blocks from the primary_container to the buffer_containers if required.
    */
-  debug("Preparing to clear everything from primary container %d\n", primary_container);
   while(container[primary_container].size() != 0) {
     int block = container[primary_container].front();
-    debug("Clearing block %d from primary container\n", block);
     if (!is_elibigle_for_buffer_container(block)) {
       /**
        * In this case, literally we have no where to push it to.
@@ -128,7 +140,6 @@ void transfer_blocks_to_containers() {
        */
       container[secondary_container].push(block);
       container[primary_container].pop();
-      debug("Added block %d to secondary container %d\n", block, secondary_container);
       /**
        * Add it to the solution.
        */
@@ -144,7 +155,6 @@ void transfer_blocks_to_containers() {
       int buffer_container = get_buffer_container_for_block(block);
       container[buffer_container].push(block);
       container[primary_container].pop();
-      debug("Added block %d to buffer container %d\n", block, buffer_container);
       /**
        * Add it to the solution.
        */
@@ -161,13 +171,10 @@ void transfer_blocks_to_containers() {
    */
   for (int i = 0; i < buffer_containers.size(); i++) {
     int buffer_container = buffer_containers[i];
-    debug("Preparing to clear everything from buffer container %d\n", buffer_container);
     while(container[buffer_containers[i]].size() != 0) {
       int block = container[buffer_container].front();
-      debug("Clearing block %d from primary container\n", block);
       container[secondary_container].push(block);
       container[buffer_container].pop();
-      debug("Added block %d to secondary container %d\n", block, secondary_container);
       /**
        * Add it to the solution.
        */
@@ -180,17 +187,14 @@ void transfer_blocks_to_containers() {
   }
   for (int i = 0; i < N; i++) {
     if (used_containers[i] != 0) continue;
-    debug("Preparing to clear everything from normal container %d\n", i);
     while(container[i].size() != 0) {
       int block = container[i].front();
-      debug("Clearing block %d from normal container\n", block);
       if (!is_elibigle_for_buffer_container(block)) {
         /**
          * Remove it from the current container and add it to the primary_container
          */
         container[primary_container].push(block);
         container[i].pop();
-        debug("Added block %d to primary container %d\n", block, primary_container);
         /**
          * Add it to the solution.
          */
@@ -203,7 +207,6 @@ void transfer_blocks_to_containers() {
         int buffer_container = get_buffer_container_for_block(block);
         container[buffer_container].push(block);
         container[i].pop();
-        debug("Added block %d to buffer container %d\n", block, buffer_container);
         /**
          * Add it to the solution.
          */
@@ -215,29 +218,141 @@ void transfer_blocks_to_containers() {
       }
     }
   }
-  // Asserts!!
-  for (int i = 0; i < N; i++){
-    if (used_containers[i] != 1) {
-      assert(container[i].size() == 0);
+}
+
+/**
+ * Now we will transfer each block their respective containers.
+ */
+void transfer_blocks_to_respective_containers() {
+  int total = 0;
+  while(total != B) {
+    int found_useful_block =  0;
+    while(container[primary_container].size() > 0) {
+      int block = container[primary_container].front();
+      int block_mapped_container = get_container_for_block(block);
+      if (container[block_mapped_container].size() > 0) {
+        int previous_block = container[block_mapped_container].back();
+        if (previous_block + get_useful_containers() == block) {
+          container[block_mapped_container].push(block);
+          container[primary_container].pop();
+          /**
+           * Add it to the solution.
+           */
+          solution.push_back(
+            make_pair(
+              primary_container, block_mapped_container
+            )
+          );
+          found_useful_block += 1;
+          total += 1;
+        } else {
+          container[secondary_container].push(block);
+          container[primary_container].pop();
+          /**
+           * Add it to the solution.
+           */
+          solution.push_back(
+            make_pair(
+              primary_container, secondary_container
+            )
+          );
+        }
+      } else {
+        if (block == first_element_in_container_for_block(block)) {
+          container[block_mapped_container].push(block);
+          container[primary_container].pop();
+          /**
+           * Add it to the solution.
+           */
+          solution.push_back(
+            make_pair(
+              primary_container, block_mapped_container
+            )
+          );
+          total += 1;
+          found_useful_block += 1;
+        } else {
+          container[secondary_container].push(block);
+          container[primary_container].pop();
+          /**
+           * Add it to the solution.
+           */
+          solution.push_back(
+            make_pair(
+              primary_container, secondary_container
+            )
+          );
+        }
+      }
+    }
+    if (found_useful_block == 0) {
+      for (auto buffer_container: buffer_containers) {
+        if (container[buffer_container].size() > 0 ) {
+          while(container[secondary_container].size() != 0) {
+            int block = container[secondary_container].front();
+            container[buffer_container].push(block);
+            container[secondary_container].pop();
+            /**
+             * Add it to the solution.
+             */
+            solution.push_back(
+              make_pair(
+                secondary_container, buffer_container
+              )
+            );
+          }
+          primary_container = buffer_container;
+          assert(container[secondary_container].size() == 0);
+          assert(container[primary_container].size() != 0);
+          break;
+        }
+      }
     } else {
-      debug("Used Container Size is %lu\n", container[i].size());
+      swap(primary_container, secondary_container);
+    }
+  }
+}
+
+void sort_containers() {
+  primary_container = container[primary_container].size() == 0 ? primary_container : secondary_container;
+  assert(container[primary_container].size() == 0);
+  int total = 1;
+  while(total < B) {
+    for (int i = 0; i < get_useful_containers(); i++) {
+      int container_index = container_index_mapping[i];
+      if (container[container_index].size() > 0) {
+        int block = container[container_index].front();
+        assert(block == total);
+        container[primary_container].push(block);
+        container[container_index].pop();
+        /**
+         * Add it to the solution.
+         */
+        solution.push_back(
+          make_pair(
+            container_index, primary_container
+          )
+        );
+        total += 1;
+      }
     }
   }
 }
 
 void solve() {
   sort_containers_based_on_heuristic();
-  fflush(stdout);
   choose_fixed_containers();
-  fflush(stdout);
-  transfer_blocks_to_containers();
+  transfer_blocks_to_initial_containers();
+  determine_container_index_mapping();
+  transfer_blocks_to_respective_containers();
+  sort_containers();
 }
 
 int main() {
   input();
   solve();
-  // verify_solution();
-  // print_solution();
+  verify_solution();
+  print_solution();
   return 0;
 }
 
@@ -310,4 +425,5 @@ void print_solution() {
   for (auto move: solution) {
     printf("%d %d\n", move.first + 1, move.second + 1);
   }
+  fflush(stdout);
 }
