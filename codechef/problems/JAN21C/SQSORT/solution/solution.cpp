@@ -26,30 +26,8 @@ vector<pair<int, int> > solution;
 
 int INITIAL_FULL_QUEUE = 0;
 int INITIAL_EMPTY_QUEUE = 1;
-/**
- * Take the input
- */
-void input() {
-  scanf("%d %d", &N, &B);
-  for (int i = 0; i < N; i++) {
-    scanf("%d", C + i);
-  }
-  for (int i = 0; i < N; i++) {
-    scanf("%d", D + i);
-  }
-  for (int i = 0; i < B; i++) {
-    scanf("%d", W + i);
-  }
-  for (int i = 0; i < N; i++) {
-    int M;
-    scanf("%d", &M);
-    for (int j = 0; j < M; j++) {
-      scanf("%d", &A[i][j]);
-      block_queues[i].push(A[i][j]);
-      copy_queue[i].push(A[i][j]);
-    }
-  }
-}
+
+void input();
 
 int get_min_not_at_index(int index) {
   int mins = 1 << 20;
@@ -96,19 +74,26 @@ void decide_empty_full_queues() {
  * Transfer all the blocks to the zeroth queue
  */
 void transfer_to_initial_full_queue() {
-  for (int i = 0; i < N; i++) {
-    if (i == INITIAL_FULL_QUEUE) continue;
-    while(block_queues[i].size() != 0) {
-      block_queues[INITIAL_FULL_QUEUE].push(
-        block_queues[i].front()
-      );
-      block_queues[i].pop();
-      solution.push_back(
-        make_pair(
-          i, INITIAL_FULL_QUEUE
-        )
-      );
+  int total = block_queues[INITIAL_FULL_QUEUE].size();
+  while(total != B) {
+    int mins = 1 << 20, min_index = -1;
+    for (int i = 0; i < N; i++) {
+      if (i == INITIAL_FULL_QUEUE) continue;
+      if (block_queues[i].size() > 0 && block_queues[i].front() < mins) {
+        mins = block_queues[i].front();
+        min_index = i;
+      }
     }
+    block_queues[INITIAL_FULL_QUEUE].push(
+      block_queues[min_index].front()
+    );
+    block_queues[min_index].pop();
+    solution.push_back(
+      make_pair(
+        min_index, INITIAL_FULL_QUEUE
+      )
+    );
+    total += 1;
   }
   /**
    * We assert that all elements have been transferred to the 0th queue.
@@ -276,4 +261,29 @@ int main() {
   verify_solution();
   print_solution();
   return 0;
+}
+
+/**
+ * Take the input
+ */
+void input() {
+  scanf("%d %d", &N, &B);
+  for (int i = 0; i < N; i++) {
+    scanf("%d", C + i);
+  }
+  for (int i = 0; i < N; i++) {
+    scanf("%d", D + i);
+  }
+  for (int i = 0; i < B; i++) {
+    scanf("%d", W + i);
+  }
+  for (int i = 0; i < N; i++) {
+    int M;
+    scanf("%d", &M);
+    for (int j = 0; j < M; j++) {
+      scanf("%d", &A[i][j]);
+      block_queues[i].push(A[i][j]);
+      copy_queue[i].push(A[i][j]);
+    }
+  }
 }
