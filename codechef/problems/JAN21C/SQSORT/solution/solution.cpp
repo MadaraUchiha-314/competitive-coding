@@ -32,11 +32,11 @@ vector<int> buffer_containers;
 int used_containers[MAX_CONTAINERS];
 vector<pair<int, int> > solution;
 int container_index_mapping[MAX_CONTAINERS];
-
+int init_container_sizes[MAX_CONTAINERS];
 /**
  * Buffer container is a container where we keep our "inactive" blocks which which come into the picture only during latter iterations.
  */
-int num_buffer_containers = 2;
+int num_buffer_containers = 0;
 
 int primary_container = 0;
 int secondary_container = 1;
@@ -46,9 +46,10 @@ int secondary_container = 1;
  * Forward declaration of stuff.
  */
 void input();
-void verify_solution();
+int verify_solution();
 void print_solution();
 void print_containers();
+void reset_to_initial_state();
 /**
  * Sorts the containers based on the heuristic of the smalled C[i] + D[i] for each container.
  */
@@ -102,6 +103,7 @@ inline int get_buffer_container_for_block(int block) {
     (int)buffer_containers.size(),
     (block - 1) / total_capacity
   );
+  assert(buffer_container_index > 0);
   return buffer_containers[buffer_container_index - 1];
 }
 
@@ -234,7 +236,7 @@ void transfer_blocks_to_initial_containers() {
 void transfer_blocks_to_respective_containers() {
   int total = 0;
   while(total != B) {
-    // debug("Total Blocks Placed %d\n", total);
+    debug("Total Blocks Placed %d\n", total);
     int found_useful_block =  0;
     while(container[primary_container].size() > 0) {
       int block = container[primary_container].front();
@@ -243,6 +245,7 @@ void transfer_blocks_to_respective_containers() {
       if (container[block_mapped_container].size() > 0) {
         int previous_block = container[block_mapped_container].back();
         if (previous_block + get_useful_containers() == block) {
+          debug("Putting block %d in container %d with size %lu and last element %d\n", block, block_mapped_container, container[block_mapped_container].size(), previous_block);
           container[block_mapped_container].push(block);
           container[primary_container].pop();
           /**
@@ -269,6 +272,7 @@ void transfer_blocks_to_respective_containers() {
         }
       } else {
         if (block == first_element_in_container_for_block(block)) {
+          debug("Putting block %d in container %d with size %lu and last element %d\n", block, block_mapped_container, container[block_mapped_container].size(), -1);
           container[block_mapped_container].push(block);
           container[primary_container].pop();
           /**
@@ -279,8 +283,8 @@ void transfer_blocks_to_respective_containers() {
               primary_container, block_mapped_container
             )
           );
-          total += 1;
           found_useful_block += 1;
+          total += 1;
         } else {
           container[secondary_container].push(block);
           container[primary_container].pop();
@@ -296,9 +300,13 @@ void transfer_blocks_to_respective_containers() {
       }
     }
     if (found_useful_block == 0) {
+      debug("Noo useful blocks were found. Adding blocks from buffer_containers\n");
       for (auto buffer_container: buffer_containers) {
-        if (container[buffer_container].size() > 0 ) {
+        if (container[buffer_container].size() > 0 && buffer_container != primary_container && buffer_container != secondary_container) {
+          debug("Using buffer_container %d\n", buffer_container);
+          assert(buffer_container != secondary_container);
           while(container[secondary_container].size() != 0) {
+            debug("Stuck here\n");
             int block = container[secondary_container].front();
             container[buffer_container].push(block);
             container[secondary_container].pop();
@@ -311,9 +319,11 @@ void transfer_blocks_to_respective_containers() {
               )
             );
           }
+          secondary_container = primary_container;
           primary_container = buffer_container;
           assert(container[secondary_container].size() == 0);
           assert(container[primary_container].size() != 0);
+          assert(container[secondary_container].size() == 0);
           break;
         }
       }
@@ -372,9 +382,22 @@ void solve() {
 }
 
 int main() {
+  int min_cost = INFINITY;
+  int min_buffers = -1;
   input();
+  for (int i = 0; i < min(8, N/2); i++) {
+    num_buffer_containers = i;
+    solve();
+    int cost = verify_solution();
+    reset_to_initial_state();
+    if (cost < min_cost) {
+      min_cost = cost;
+      min_buffers = i;
+    }
+  }
+  num_buffer_containers = min_buffers;
   solve();
-  // verify_solution();
+  verify_solution();
   print_solution();
   return 0;
 }
@@ -396,6 +419,7 @@ void input() {
   for (int i = 0; i < N; i++) {
     int M;
     scanf("%d", &M);
+    init_container_sizes[i] = M;
     for (int j = 0; j < M; j++) {
       scanf("%d", &A[i][j]);
       container[i].push(A[i][j]);
@@ -404,17 +428,20 @@ void input() {
   }
 }
 
-void verify_solution() {
+int verify_solution() {
+  int total_cost_of_solution = 0;
   assert(B < 1024 || solution.size() <= (B * B) / 2); // Assert that the solution size is also withing bounds
   // Doing the same operations as given in the solution in the copy queues that we have made
   for (auto move: solution) {
     assert((move.first < N) && (move.second < N)); // Valid container indices
     assert(move.first != move.second); // You cannot push and pop to the same container. Verify this you idiot.
     assert(container_init_state[move.first].size() > 0);   // Asserting we are not popping from an empty queue.
+    int block = container_init_state[move.first].front();
     container_init_state[move.second].push(
-      container_init_state[move.first].front()
+      block
     );
     container_init_state[move.first].pop();
+    total_cost_of_solution += (C[move.first] + D[move.second]) * W[block - 1];
   }
   // Now that we have done the Q operations, then we verify that it yielded that solution that we wanted
   int full_queue = -1;
@@ -437,6 +464,7 @@ void verify_solution() {
     i += 1;
   }
   assert(i == B + 1); // Assert that the last element that we saw was B
+  return total_cost_of_solution;
 }
 
 void print_solution() {
@@ -455,6 +483,26 @@ void print_containers() {
     debug("Container %d size is %lu\n", i, container[i].size());
     if (container[i].size() > 0) {
       debug("Front is %d\n", container[i].front());
+    }
+  }
+}
+
+void reset_to_initial_state() {
+  sorted_containers.clear();
+  buffer_containers.clear();
+  solution.clear();
+  for (int i = 0; i < MAX_CONTAINERS; i++) {
+    while(container[i].size() != 0) container[i].pop();
+    while(container_init_state[i].size() != 0) container_init_state[i].pop();
+    used_containers[i] = 0;
+    container_index_mapping[i] = 0;
+  }
+  for (int i = 0; i < N; i++) {
+    assert(container[i].size() == 0);
+    assert(container_init_state[i].size() == 0);
+    for (int j = 0; j < init_container_sizes[i]; j++) {
+      container[i].push(A[i][j]);
+      container_init_state[i].push(A[i][j]);
     }
   }
 }
