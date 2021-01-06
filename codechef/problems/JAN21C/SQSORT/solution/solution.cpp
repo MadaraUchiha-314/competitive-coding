@@ -385,7 +385,7 @@ int main() {
   int min_cost = INFINITY;
   int min_buffers = -1;
   input();
-  for (int i = 0; i < min(8, N/2); i++) {
+  for (int i = 0; i < min(32, N/2); i++) {
     num_buffer_containers = i;
     solve();
     int cost = verify_solution();
@@ -394,6 +394,7 @@ int main() {
       min_cost = cost;
       min_buffers = i;
     }
+    debug("Cost for N = %d num_buffer_containers = %d is %d\n", N, num_buffer_containers, cost);
   }
   num_buffer_containers = min_buffers;
   solve();
