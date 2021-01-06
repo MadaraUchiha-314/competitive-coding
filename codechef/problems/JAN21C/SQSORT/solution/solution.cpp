@@ -36,7 +36,7 @@ int container_index_mapping[MAX_CONTAINERS];
 /**
  * Buffer container is a container where we keep our "inactive" blocks which which come into the picture only during latter iterations.
  */
-int num_buffer_containers = 1;
+int num_buffer_containers = 2;
 
 int primary_container = 0;
 int secondary_container = 1;
@@ -76,13 +76,20 @@ void choose_fixed_containers() {
 
   used_containers[sorted_containers[0].second] = 1; // Mark as used
   used_containers[sorted_containers[1].second] = 1; // Mark as used
+
+  debug("============\n");
+  debug("Total Containers are %d\n", N);
+  debug("Primary container Index is %d\n", primary_container);
+  debug("Secondary container Index is %d\n", secondary_container);
   /**
    * We maintain a separate list for buffer_containers.
    */
   for (int i = 0; i < num_buffer_containers; i++) {
     buffer_containers.push_back(sorted_containers[i + 2].second);
     used_containers[sorted_containers[i + 2].second] = 1; // Mark as used
+    debug("Buffer container Index is %d\n", sorted_containers[i + 2].second);
   }
+  debug("============\n");
 }
 
 inline bool is_elibigle_for_buffer_container(int block) {
@@ -91,7 +98,10 @@ inline bool is_elibigle_for_buffer_container(int block) {
 
 inline int get_buffer_container_for_block(int block) {
   int total_capacity = B / (num_buffer_containers + 1);
-  int buffer_container_index = (block - 1)/ total_capacity;
+  int buffer_container_index = min(
+    (int)buffer_containers.size(),
+    (block - 1) / total_capacity
+  );
   return buffer_containers[buffer_container_index - 1];
 }
 
@@ -133,37 +143,21 @@ void transfer_blocks_to_initial_containers() {
    */
   while(container[primary_container].size() != 0) {
     int block = container[primary_container].front();
-    if (!is_elibigle_for_buffer_container(block)) {
-      /**
-       * In this case, literally we have no where to push it to.
-       * So we push it to secondary_container.
-       */
-      container[secondary_container].push(block);
-      container[primary_container].pop();
-      /**
-       * Add it to the solution.
-       */
-      solution.push_back(
-        make_pair(
-          primary_container, secondary_container
-        )
-      );
-    } else {
-      /**
-       * We push it to one of the buffer containers.
-       */
-      int buffer_container = get_buffer_container_for_block(block);
-      container[buffer_container].push(block);
-      container[primary_container].pop();
-      /**
-       * Add it to the solution.
-       */
-      solution.push_back(
-        make_pair(
-          primary_container, buffer_container
-        )
-      );
-    }
+    debug("Transferring Block %d from primary container %d to secondary container %d\n", block, primary_container, secondary_container);
+    /**
+     * In this case, literally we have no where to push it to.
+     * So we push it to secondary_container.
+     */
+    container[secondary_container].push(block);
+    container[primary_container].pop();
+    /**
+     * Add it to the solution.
+     */
+    solution.push_back(
+      make_pair(
+        primary_container, secondary_container
+      )
+    );
   }
   /**
    * We do the same for our buffer containers also.
@@ -173,6 +167,7 @@ void transfer_blocks_to_initial_containers() {
     int buffer_container = buffer_containers[i];
     while(container[buffer_containers[i]].size() != 0) {
       int block = container[buffer_container].front();
+      debug("Transferring block %d from buffer to secondary\n", block);
       container[secondary_container].push(block);
       container[buffer_container].pop();
       /**
@@ -185,11 +180,18 @@ void transfer_blocks_to_initial_containers() {
       );
     }
   }
+  swap(primary_container, secondary_container);
+  debug("Primary container Index is %d\n", primary_container);
+  debug("Secondary container Index is %d\n", secondary_container);
+  print_containers();
   for (int i = 0; i < N; i++) {
     if (used_containers[i] != 0) continue;
+    debug("Working on container %d\n", i);
     while(container[i].size() != 0) {
       int block = container[i].front();
       if (!is_elibigle_for_buffer_container(block)) {
+        debug("Transferring Block %d from container %d to primary_container container %d\n", block, i, primary_container);
+        debug("Size of container %d is %lu\n", i, container[i].size());
         /**
          * Remove it from the current container and add it to the primary_container
          */
@@ -205,6 +207,7 @@ void transfer_blocks_to_initial_containers() {
         );
       } else {
         int buffer_container = get_buffer_container_for_block(block);
+        debug("Transferring Block %d from container %d to buffer_container container %d\n", block, i, buffer_container);
         container[buffer_container].push(block);
         container[i].pop();
         /**
@@ -218,6 +221,11 @@ void transfer_blocks_to_initial_containers() {
       }
     }
   }
+  debug("============\n");
+  for (int i = 0; i < N; i++) {
+    debug("Container %d size is %lu\n", i, container[i].size());
+  }
+  debug("============\n");
 }
 
 /**
@@ -226,10 +234,12 @@ void transfer_blocks_to_initial_containers() {
 void transfer_blocks_to_respective_containers() {
   int total = 0;
   while(total != B) {
+    // debug("Total Blocks Placed %d\n", total);
     int found_useful_block =  0;
     while(container[primary_container].size() > 0) {
       int block = container[primary_container].front();
       int block_mapped_container = get_container_for_block(block);
+      debug("Processing Block %d\n", block);
       if (container[block_mapped_container].size() > 0) {
         int previous_block = container[block_mapped_container].back();
         if (previous_block + get_useful_containers() == block) {
@@ -341,11 +351,24 @@ void sort_containers() {
 
 void solve() {
   sort_containers_based_on_heuristic();
+  debug("Sorting based on heuristic complete\n");
+  debug("============\n");
+  print_containers();
   choose_fixed_containers();
+  debug("Choosing fixed contaiers complete\n");
+  debug("============\n");
   transfer_blocks_to_initial_containers();
+  debug("Transferred blocks to initial container\n");
+  debug("============\n");
   determine_container_index_mapping();
+  debug("Determined container index mappings\n");
+  debug("============\n");
   transfer_blocks_to_respective_containers();
+  debug("Transferrign blocks to respective containers\n");
+  debug("============\n");
   sort_containers();
+  debug("Sorting containers\n");
+  debug("============\n");
 }
 
 int main() {
@@ -429,7 +452,7 @@ void print_solution() {
 
 void print_containers() {
   for(int i = 0; i < N; i++) {
-    debug("Container %d \n", i);
+    debug("Container %d size is %lu\n", i, container[i].size());
     if (container[i].size() > 0) {
       debug("Front is %d\n", container[i].front());
     }
