@@ -188,7 +188,7 @@ class StackQueue {
      */
     void choose_working_containers() {
       secondary_container = sorted_containers[0].second;
-      primary_container = sorted_containers[N - 1].second;
+      primary_container = sorted_containers[1].second;
       /**
        * When we choose a working container, we also mark them as used.
        */
