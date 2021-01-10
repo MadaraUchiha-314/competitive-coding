@@ -1,0 +1,30 @@
+Primary and Secondary containers are 0 1
+Container Index of 0 is 2
+Container Index of 1 is 3
+Container Index of 2 is 4
+Container Index of 3 is 5
+Container Index of 4 is 6
+Container Index of 5 is 7
+Start ::Distribute blocks
+Start :: Empty Primary Container
+Push Pop on 1 from 0 to 3
+Push Pop on 2 from 0 to 4
+End :: Empty Primary Container
+Start :: Empty 1 Container
+Push Pop on 0 from 1 to 2
+End :: Empty 1 Container
+Start :: Empty 2 Container
+Push Pop on 3 from 2 to 5
+End :: Empty 2 Container
+Start :: Empty 3 Container
+End :: Empty 3 Container
+Start :: Empty 4 Container
+End :: Empty 4 Container
+Start :: Empty 5 Container
+End :: Empty 5 Container
+Start :: Empty 6 Container
+End :: Empty 6 Container
+Start :: Empty 7 Container
+End :: Empty 7 Container
+End ::Distribute blocks
+Start :: Empty Sort Container 2

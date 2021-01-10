@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <queue>
 #include <stack>
+#include <deque>
 #include <vector>
 #include <utility>
 using namespace std;
@@ -18,450 +19,372 @@ using namespace std;
 const int INFINITY = 1 << 30;
 const int MAX_CONTAINERS = 128;
 const int MAX_BLOCKS = 1024;
+const int STACK = 1, QUEUE = 0;
+const int INVALID_COST = -1;
+const int INVALID_ELEMENT = -1;
 
-// Variables for the problem
-int N, B;
-int C[MAX_CONTAINERS], D[MAX_CONTAINERS], W[MAX_BLOCKS];
-int A[MAX_CONTAINERS][MAX_BLOCKS];
-
-// Variables for the solution
-queue<int> container[MAX_CONTAINERS];
-queue<int> container_init_state[MAX_CONTAINERS];
-vector<pair<int ,int> > sorted_containers;
-vector<int> buffer_containers;
-int used_containers[MAX_CONTAINERS];
-vector<pair<int, int> > solution;
-int container_index_mapping[MAX_CONTAINERS];
-int init_container_sizes[MAX_CONTAINERS];
-/**
- * Buffer container is a container where we keep our "inactive" blocks which which come into the picture only during latter iterations.
- */
-int num_buffer_containers = 0;
-
-int primary_container = 0;
-int secondary_container = 1;
-
-
-/**
- * Forward declaration of stuff.
- */
-void input();
-int verify_solution();
-void print_solution();
-void print_containers();
-void reset_to_initial_state();
-/**
- * Sorts the containers based on the heuristic of the smalled C[i] + D[i] for each container.
- */
-void sort_containers_based_on_heuristic() {
-  for (int i = 0; i < N; i++) {
-    sorted_containers.push_back(
-      make_pair(
-        C[i] + D[i],
-        i
-      )
-    );
-  }
-  sort(sorted_containers.begin(), sorted_containers.end());
-}
-
-/**
- * We choose the best 2 containers for as the "working" containers and the rest as the buffer/inactive containers.
- */
-void choose_fixed_containers() {
-  /**
-   * The below 2 will be our initial working containers.
-   */
-  primary_container = sorted_containers[0].second;
-  secondary_container = sorted_containers[1].second;
-
-  used_containers[sorted_containers[0].second] = 1; // Mark as used
-  used_containers[sorted_containers[1].second] = 1; // Mark as used
-  /**
-   * We maintain a separate list for buffer_containers.
-   */
-  for (int i = 0; i < num_buffer_containers; i++) {
-    buffer_containers.push_back(sorted_containers[i + 2].second);
-    used_containers[sorted_containers[i + 2].second] = 1; // Mark as used
-  }
-}
-
-inline bool is_elibigle_for_buffer_container(int block) {
-  return block > (B / (num_buffer_containers + 1));
-}
-
-inline int get_buffer_container_for_block(int block) {
-  int total_capacity = B / (num_buffer_containers + 1);
-  int buffer_container_index = min(
-    (int)buffer_containers.size(),
-    (block - 1) / total_capacity
-  );
-  assert(buffer_container_index > 0);
-  return buffer_containers[buffer_container_index - 1];
-}
-
-inline int get_useful_containers() {
-  return N - (int)buffer_containers.size() - 2;
-}
-
-inline int get_container_for_block(int block) {
-  int total_usable_containers = get_useful_containers();
-  int container_index = (block - 1) % total_usable_containers;
-  return container_index_mapping[container_index];
-}
-
-inline int first_element_in_container_for_block(int block) {
-  return ((block - 1) % get_useful_containers()) + 1;
-}
-
-void determine_container_index_mapping() {
-  int last_used = -1;
-  for(int i = 0; i < N; i++) {
-    int j = i;
-    while(j <= last_used || used_containers[j] == 1) {
-      j += 1;
+class StackQueue {
+  public:
+    int N, B;
+    deque<int> container[MAX_CONTAINERS];
+    vector<int> C, D;
+    vector<int> W;
+    vector<pair<int, int> > operations;
+    vector<int> container_type;
+    int operation_costs;
+    vector<pair<int, int> > sorted_containers;
+    int primary_container, secondary_container;
+    vector<bool> is_container_used;
+    vector<int> mapped_container_index;
+    int total_useful_containers;
+    int useful_container_capacity;
+    vector<int> initial_container_sizes;
+    vector<int> initial_last_element;
+  public:
+    /**
+     * Initialises the StackQueueSort data structure
+     * @param N The number of of container
+     * @param B The number of blocks
+     */
+    StackQueue(int N, int B) {
+      this->N = N;
+      this->B = B;
+      this->C.resize(N);
+      this->D.resize(N);
+      this->W.resize(B);
+      this->container_type.resize(N);
+      this->operation_costs = 0;
+      this->is_container_used.resize(N);
+      this->mapped_container_index.resize(N);
+      this->total_useful_containers = N - 2;
+      this->initial_container_sizes.resize(N);
+      this->initial_last_element.resize(N);
+      this->useful_container_capacity = max(1, B / (N - 2));
     }
-    container_index_mapping[i] = j;
-    last_used = j;
-  }
-}
 
-/**
- * We transfer all the blocks from all the containers to two places.
- * 1. primary_container
- * 2. One of the buffer_containers based on the value of the block.
- */
-void transfer_blocks_to_initial_containers() {
-  /**
-   * Before we do all the transfer.
-   * We can transfer temporarily inactive blocks from the primary_container to the buffer_containers if required.
-   */
-  while(container[primary_container].size() != 0) {
-    int block = container[primary_container].front();
     /**
-     * In this case, literally we have no where to push it to.
-     * So we push it to secondary_container.
+     * Used to initially populate block in container
+     * @param index The index of the container
+     * @param  block The element to be pushed
      */
-    container[secondary_container].push(block);
-    container[primary_container].pop();
+    void populate(int index, int block) {
+      container[index].push_back(block);
+      initial_container_sizes[index] += 1;
+      initial_last_element[index] = block;
+    }
+
     /**
-     * Add it to the solution.
+     * Adds properties of each container
+     * @param index     The index of the container
+     * @param pop_cost  The cost of popping an element from this container
+     * @param push_cost The cost of pushing an element to this container
      */
-    solution.push_back(
-      make_pair(
-        primary_container, secondary_container
-      )
-    );
-  }
-  /**
-   * We do the same for our buffer containers also.
-   * We put all the buffer container stuff in the secondary conatiner.
-   */
-  for (int i = 0; i < buffer_containers.size(); i++) {
-    int buffer_container = buffer_containers[i];
-    while(container[buffer_containers[i]].size() != 0) {
-      int block = container[buffer_container].front();
-      container[secondary_container].push(block);
-      container[buffer_container].pop();
+    void set_container_properties(int index, int pop_cost, int push_cost) {
+      if (pop_cost != INVALID_COST) {
+        this->C[index] = pop_cost;
+      }
+      if (push_cost != INVALID_COST) {
+        this->D[index] = push_cost;
+      }
+    }
+
+    /**
+     * Adds properties for each block
+     * @param index        The index of the container
+     * @param block_weight The weight of each block
+     */
+    void set_block_properties(int index, int block_weight) {
+      W[index] = block_weight;
+    }
+
+    /**
+     * Sets the container type
+     * @param index The index of the container
+     * @param type  The type of the container
+     */
+    void set_container_type(int index, int type) {
+      container_type[index] = type;
+     }
+
+    int get_container_type(int index) {
+      return container_type[index];
+    }
+
+    /**
+     * Pops an element from the container at given index
+     * @param index The index of the container
+     */
+    void pop(int index) {
+      if (container_type[index] == QUEUE) {
+        container[index].pop_front();
+      } else {
+        container[index].pop_back();
+      }
+    }
+
+    /**
+     * Pushes an element to the container at given index
+     * @param index The index of the container
+     * @param block The block to be pushed
+     */
+    void push(int index, int block) {
+      container[index].push_back(block);
+    }
+
+    /**
+     * The current element of the container on which an operation can be performed
+     * @param  index The index of the container
+     * @return       The block
+     */
+    int current(int index) {
+      if (container[index].size() == 0) return INVALID_ELEMENT;
+      if (container_type[index] == QUEUE) {
+        return container[index].front();
+      } else {
+        return container[index].back();
+      }
+    }
+
+    /**
+     * The last element of the container
+     * @param  index The index of the container
+     * @return       The block
+     */
+    int last(int index) {
+      return container[index].back();
+    }
+
+    /**
+     * Pops the element from the src and pushed it to the dest
+     * @param src  The index of the container from where element should be popped
+     * @param dest  The index of the container from where the popped element should be pushed
+     */
+    void pop_push(int src, int dest) {
+      assert(src != dest);
+      int block = current(src);
+      push(dest, block);
+      pop(src);
       /**
-       * Add it to the solution.
+       * Log the operation which was performed.
        */
-      solution.push_back(
-        make_pair(
-          buffer_container, secondary_container
+      operations.push_back(make_pair(src, dest));
+      operation_costs += W[block] * (C[src] + D[dest]);
+    }
+
+    /**
+     * We sort the containers on the basis of the cost it takes to push and pop into those containers
+     */
+    void sort_containers_by_costs() {
+      for (int i = 0; i < N; i++) {
+        sorted_containers.push_back(make_pair(C[i] + D[i], i));
+        std::sort(
+          sorted_containers.begin(), sorted_containers.end()
+        );
+      }
+    }
+
+    /**
+     * We choose the two best working containers as the primary_container and the secondary_container
+     */
+    void choose_working_containers() {
+      secondary_container = sorted_containers[0].second;
+      primary_container = sorted_containers[N - 1].second;
+      /**
+       * When we choose a working container, we also mark them as used.
+       */
+      is_container_used[primary_container] = true;
+      is_container_used[secondary_container] = true;
+
+      /**
+       * We will use the primary and secondary containers as stacks.
+       */
+      container_type[primary_container] = STACK;
+      container_type[secondary_container] = QUEUE;
+    }
+
+    /**
+     * After we have chosen the primary and secondary containers
+     */
+    void remap_container_indices() {
+      int last_used = -1;
+      for (int i = 0; i < total_useful_containers; i++) {
+        int j = last_used + 1;
+        /**
+         * Find the next unused container
+         */
+        while(is_container_used[j]) {
+          j += 1;
+        }
+        mapped_container_index[i] = j;
+        last_used = j;
+      }
+    }
+
+    /**
+     * Gets the container index for a give block
+     * @param  block The block
+     * @return Index of the container
+     */
+    int get_container_for_block(int block) {
+      int original_container_index = block / (int)useful_container_capacity;
+      int mapped_index = mapped_container_index[
+        min(
+          original_container_index,
+          N - 3
         )
-      );
+      ];
+      return mapped_index;
     }
-  }
-  swap(primary_container, secondary_container);
-  for (int i = 0; i < N; i++) {
-    if (used_containers[i] != 0) continue;
-    while(container[i].size() != 0) {
-      int block = container[i].front();
-      if (!is_elibigle_for_buffer_container(block)) {
-        /**
-         * Remove it from the current container and add it to the primary_container
-         */
-        container[primary_container].push(block);
-        container[i].pop();
-        /**
-         * Add it to the solution.
-         */
-        solution.push_back(
-          make_pair(
-            i, primary_container
-          )
-        );
-      } else {
-        int buffer_container = get_buffer_container_for_block(block);
-        container[buffer_container].push(block);
-        container[i].pop();
-        /**
-         * Add it to the solution.
-         */
-        solution.push_back(
-          make_pair(
-            i, buffer_container
-          )
-        );
-      }
-    }
-  }
-  for (int i = 0; i < N; i++) {
-  }
-}
 
-/**
- * Now we will transfer each block their respective containers.
- */
-void transfer_blocks_to_respective_containers() {
-  int total = 0;
-  while(total != B) {
-    int found_useful_block =  0;
-    while(container[primary_container].size() > 0) {
-      int block = container[primary_container].front();
-      int block_mapped_container = get_container_for_block(block);
-      if (container[block_mapped_container].size() > 0) {
-        int previous_block = container[block_mapped_container].back();
-        if (previous_block + get_useful_containers() == block) {
-          container[block_mapped_container].push(block);
-          container[primary_container].pop();
-          /**
-           * Add it to the solution.
-           */
-          solution.push_back(
-            make_pair(
-              primary_container, block_mapped_container
-            )
-          );
-          found_useful_block += 1;
-          total += 1;
-        } else {
-          container[secondary_container].push(block);
-          container[primary_container].pop();
-          /**
-           * Add it to the solution.
-           */
-          solution.push_back(
-            make_pair(
-              primary_container, secondary_container
-            )
-          );
-        }
-      } else {
-        if (block == first_element_in_container_for_block(block)) {
-          container[block_mapped_container].push(block);
-          container[primary_container].pop();
-          /**
-           * Add it to the solution.
-           */
-          solution.push_back(
-            make_pair(
-              primary_container, block_mapped_container
-            )
-          );
-          found_useful_block += 1;
-          total += 1;
-        } else {
-          container[secondary_container].push(block);
-          container[primary_container].pop();
-          /**
-           * Add it to the solution.
-           */
-          solution.push_back(
-            make_pair(
-              primary_container, secondary_container
-            )
-          );
-        }
+    /**
+     * This distributes the blocks evenly among all the containers
+     */
+    void distribute_blocks() {
+      /**
+       * Now we will empty the primary container.
+       */
+      while(container[primary_container].size() != 0) {
+        pop_push(
+          primary_container,
+          get_container_for_block(
+            current(primary_container)
+          )
+        );
       }
-    }
-    if (found_useful_block == 0) {
-      for (auto buffer_container: buffer_containers) {
-        if (container[buffer_container].size() > 0 && buffer_container != primary_container && buffer_container != secondary_container) {
-          assert(buffer_container != secondary_container);
-          while(container[secondary_container].size() != 0) {
-            int block = container[secondary_container].front();
-            container[buffer_container].push(block);
-            container[secondary_container].pop();
-            /**
-             * Add it to the solution.
-             */
-            solution.push_back(
-              make_pair(
-                secondary_container, buffer_container
-              )
-            );
+      assert(container[primary_container].size() == 0);
+      /**
+       * For every other container, we will empty them and put the blocks in their appropriate places.
+       */
+      for (int i = 0; i < N; i++) {
+        while(initial_container_sizes[i] > 0 && container[i].size() > 0) {
+          int block = current(i);
+          int dest = get_container_for_block(block);
+          /**
+           * There are 2 cases here. Each container can either go into its own block or into another block.
+           * If its the former case, then we need one extra operation to push it to the primary container and then pop it to its actual container.
+           */
+          if (dest == i) {
+            pop_push(i, primary_container);
+            pop_push(primary_container, dest);
+          } else {
+            pop_push(i, dest);
           }
-          secondary_container = primary_container;
-          primary_container = buffer_container;
-          assert(container[secondary_container].size() == 0);
-          assert(container[primary_container].size() != 0);
-          assert(container[secondary_container].size() == 0);
-          break;
+          /**
+           * Some blocks may have come into the queue because of our operations. We don't want to apply the operations on them.
+           * @param block [description]
+           */
+          if (block == initial_last_element[i]) {
+            break;
+          }
         }
       }
-    } else {
-      swap(primary_container, secondary_container);
     }
-  }
-}
 
-void sort_containers() {
-  primary_container = container[primary_container].size() == 0 ? primary_container : secondary_container;
-  assert(container[primary_container].size() == 0);
-  int total = 0;
-  while(total < B) {
-    for (int i = 0; i < N; i++) {
-      if (i == primary_container) continue;
-      if (container[i].size() > 0) {
-        int block = container[i].front();
-        assert(block == total + 1);
-        container[primary_container].push(block);
-        container[i].pop();
-        /**
-         * Add it to the solution.
-         */
-        solution.push_back(
-          make_pair(
-            i, primary_container
-          )
-        );
-        total += 1;
+    /**
+     * Sorts a given container. All the elements eventually go to the primary container. This uses the secondary container as the buffer.
+     * @param index The index of the container
+     */
+    void sort_container(int index) {
+      int from = index, to = secondary_container;
+      while(container[from].size() > 0) {
+        while(container[from].size() > 0) {
+          int block = current(from);
+          if (current(primary_container) == block - 1) {
+            pop_push(from, primary_container);
+          } else {
+            pop_push(from, to);
+          }
+        }
+        swap(from, to);
       }
     }
-  }
-}
 
-void solve() {
-  sort_containers_based_on_heuristic();
-  choose_fixed_containers();
-  transfer_blocks_to_initial_containers();
-  determine_container_index_mapping();
-  transfer_blocks_to_respective_containers();
-  sort_containers();
-}
+    void sort() {
+      /**
+       * This is our strategy to sort.
+       * 1. Sort the containers baased on their C[i] + D[i] for ith container
+       * 2. Choose 2 to be our working containers. Empty them.
+       * 3. Now we have K = N - 2 containers
+       * 4. For each block, add the ith block to the (i % K)th empty container
+       * 5. Now go through each of the filled containers and sort them
+       */
+      sort_containers_by_costs();
+      choose_working_containers();
+      remap_container_indices();
+      distribute_blocks();
+      for(int i = 0; i < N; i++) {
+        if (i == primary_container || i == secondary_container) continue;
+        if (container[i].size() > 0) {
+          sort_container(i);
+        }
+      }
+    }
+
+    void verify_sorting() {
+      int total_empty = 0, total_full = 1;
+      int full_container_index = -1;
+      for (int i = 0; i < N; i++) {
+        if (container[i].size() > 0) {
+          total_full += 1;
+          full_container_index = i;
+        } else {
+          total_empty += 1;
+        }
+      }
+      assert(total_empty == N - 1);
+      assert(total_full = 1);
+      int current_block = B - 1;
+      while (container[full_container_index].size() > 0) {
+        int block = current(full_container_index);
+        pop(full_container_index);
+        assert(block == current_block);
+        current_block -= 1;
+      }
+      assert(current_block == -1);
+    }
+};
 
 int main() {
-  int min_cost = INFINITY;
-  int min_buffers = -1;
-  input();
-  for (int i = 0; i < min(32, N/2); i++) {
-    num_buffer_containers = i;
-    solve();
-    int cost = verify_solution();
-    reset_to_initial_state();
-    if (cost < min_cost) {
-      min_cost = cost;
-      min_buffers = i;
-    }
-  }
-  num_buffer_containers = min_buffers;
-  solve();
-  verify_solution();
-  print_solution();
-  return 0;
-}
-
-/**
- * Take the input
- */
-void input() {
+  /**
+   * Start of input.
+   */
+  int N, B, C, D, W, M, A;
   scanf("%d %d", &N, &B);
+  StackQueue sq(N, B);
   for (int i = 0; i < N; i++) {
-    scanf("%d", C + i);
+    scanf("%d", &C);
+    sq.set_container_properties(i, C, INVALID_COST);
   }
   for (int i = 0; i < N; i++) {
-    scanf("%d", D + i);
+    scanf("%d", &D);
+    sq.set_container_properties(i, INVALID_COST, D);
   }
   for (int i = 0; i < B; i++) {
-    scanf("%d", W + i);
+    scanf("%d", &W);
+    sq.set_block_properties(i, W);
   }
   for (int i = 0; i < N; i++) {
-    int M;
     scanf("%d", &M);
-    init_container_sizes[i] = M;
     for (int j = 0; j < M; j++) {
-      scanf("%d", &A[i][j]);
-      container[i].push(A[i][j]);
-      container_init_state[i].push(A[i][j]);
+      scanf("%d", &A);
+      sq.populate(i, A - 1);
     }
   }
-}
-
-int verify_solution() {
-  int total_cost_of_solution = 0;
-  assert(B < 1024 || solution.size() <= (B * B) / 2); // Assert that the solution size is also withing bounds
-  // Doing the same operations as given in the solution in the copy queues that we have made
-  for (auto move: solution) {
-    assert((move.first < N) && (move.second < N)); // Valid container indices
-    assert(move.first != move.second); // You cannot push and pop to the same container. Verify this you idiot.
-    assert(container_init_state[move.first].size() > 0);   // Asserting we are not popping from an empty queue.
-    int block = container_init_state[move.first].front();
-    container_init_state[move.second].push(
-      block
-    );
-    container_init_state[move.first].pop();
-    total_cost_of_solution += (C[move.first] + D[move.second]) * W[block - 1];
-  }
-  // Now that we have done the Q operations, then we verify that it yielded that solution that we wanted
-  int full_queue = -1;
-  int num_empty_queue = 0;
+  /**
+   * End of input.
+   */
+  sq.sort();
+  sq.verify_sorting();
   for (int i = 0; i < N; i++) {
-    if (container[i].size() != 0) {
-      full_queue = i;
+    if (sq.get_container_type(i) == QUEUE) {
+      printf("Q");
     } else {
-      num_empty_queue += 1;
+      printf("S");
     }
-  }
-  assert(full_queue != -1); // At the end, there should be atleast one full queue
-  assert(num_empty_queue == N - 1); // At the end there should be exactly N - 1 empty queues
-  assert(container_init_state[full_queue].size() == B); // The full queue should contain exactly B elements
-  // The B elements in the queue should be in sorted order from 1 to B
-  int i = 1;
-  while(container_init_state[full_queue].size() != 0) {
-    assert(container_init_state[full_queue].front() == i);
-    container_init_state[full_queue].pop();
-    i += 1;
-  }
-  assert(i == B + 1); // Assert that the last element that we saw was B
-  return total_cost_of_solution;
-}
-
-void print_solution() {
-  for (int i = 0; i < N; i++) {
-    printf("Q");
   }
   printf("\n");
-  printf("%lu\n", solution.size());
-  for (auto move: solution) {
-    printf("%d %d\n", move.first + 1, move.second + 1);
-  }
-}
-
-void print_containers() {
-  for(int i = 0; i < N; i++) {
-    if (container[i].size() > 0) {
-    }
-  }
-}
-
-void reset_to_initial_state() {
-  sorted_containers.clear();
-  buffer_containers.clear();
-  solution.clear();
-  for (int i = 0; i < MAX_CONTAINERS; i++) {
-    while(container[i].size() != 0) container[i].pop();
-    while(container_init_state[i].size() != 0) container_init_state[i].pop();
-    used_containers[i] = 0;
-    container_index_mapping[i] = 0;
-  }
-  for (int i = 0; i < N; i++) {
-    assert(container[i].size() == 0);
-    assert(container_init_state[i].size() == 0);
-    for (int j = 0; j < init_container_sizes[i]; j++) {
-      container[i].push(A[i][j]);
-      container_init_state[i].push(A[i][j]);
-    }
+  printf("%lu\n", sq.operations.size());
+  for (auto op: sq.operations) {
+    printf("%d %d\n", op.first + 1, op.second + 1);
   }
 }
