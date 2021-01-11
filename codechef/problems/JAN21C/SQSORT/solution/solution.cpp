@@ -251,10 +251,20 @@ class StackQueue {
       return mapped_index;
     }
 
+    /**
+     * Whether a block is eligible for a buffer container.
+     * @param  block The block number
+     * @return       Whether a block is eligible for a buffer container
+     */
     bool is_eligible_for_buffer_container(int block) {
       return block >= (B / (Z + 1));
     }
 
+    /**
+     * Get the buffer container index for the block
+     * @param  block The block number
+     * @return       The buffer container index for the block
+     */
     int get_buffer_container_for_block(int block) {
       int buffer_container_capacity = B / (Z + 1);
       int buffer_container_index = min(
@@ -264,10 +274,15 @@ class StackQueue {
       return buffer_containers[buffer_container_index - 1];
     }
 
+    /**
+     * Checks whether the block can reside in its container.
+     * @param  block The block number
+     * @return       Whether the block can reside in its container
+     */
     bool can_block_reisde_in_its_container(int block) {
       int container_for_block = get_container_for_block(block);
-      if (started_using_block[container_for_block] && container[container_for_block].size() > 0) {
-        if (last(container_for_block) + total_useful_containers == block) {
+      if (container[container_for_block].size() > 0) {
+        if (started_using_block[container_for_block] && (last(container_for_block) + total_useful_containers == block)) {
           return true;
         } else if (last(container_for_block) == initial_last_element[container_for_block]) {
           if (block == (block % total_useful_containers)) {
@@ -373,8 +388,9 @@ class StackQueue {
           int block = current(current_primary);
           assert(block != INVALID_ELEMENT);
           if (can_block_reisde_in_its_container(block)) {
-            started_using_block[get_container_for_block(block)] = true;
-            pop_push(current_primary, get_container_for_block(block));
+            int container_index = get_container_for_block(block);
+            started_using_block[container_index] = true;
+            pop_push(current_primary, container_index);
             total_blocks_placed += 1;
           } else {
             pop_push(current_primary, current_secondary);
@@ -387,13 +403,22 @@ class StackQueue {
         swap(current_primary, current_secondary);
         assert(container[current_secondary].size() == 0);
         if (total_blocks_placed == 0 || container[current_primary].size() == 0) {
+          bool used_buffer_container = false;
           for (int i = 0; i < Z; i++) {
             int buffer_container = buffer_containers[i];
             if (container[buffer_container].size() > 0) {
               while(container[buffer_container].size() != 0) {
-                pop_push(buffer_container, current_primary);
+                int block = current(buffer_container);
+                if (can_block_reisde_in_its_container(block)) {
+                  int container_index = get_container_for_block(block);
+                  started_using_block[container_index] = true;
+                  pop_push(buffer_container, container_index);
+                } else {
+                  pop_push(buffer_container, current_primary);
+                  used_buffer_container = true;
+                }
               }
-              break;
+              if (used_buffer_container) break;
             }
           }
         }
@@ -437,7 +462,7 @@ class StackQueue {
     void verify_sorting() {
       int total_empty = 0, total_full = 1;
       int full_container_index = -1;
-      assert(operations.size() <= (B*B)/2);
+      assert(operations.size() <= (B * B) / 2);
       for (int i = 0; i < N; i++) {
         if (container[i].size() > 0) {
           total_full += 1;
@@ -490,7 +515,7 @@ int main() {
   /**
    * End of input.
    */
-  for (int num_buffer_containers = 0; num_buffer_containers < min(N/2, 6); num_buffer_containers++) {
+  for (int num_buffer_containers = 0; num_buffer_containers < min(N / 2, 8); num_buffer_containers++) {
     StackQueue sq(N, B, num_buffer_containers);
     for (int i = 0; i < N; i++) {
       sq.set_container_properties(i, C[i], D[i]);
