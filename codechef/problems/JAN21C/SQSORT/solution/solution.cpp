@@ -41,6 +41,7 @@ class StackQueue {
     vector<int> initial_last_element;
     vector<int> buffer_containers;
     int current_buffer_container_index;
+    vector<bool> started_using_block;
   public:
     /**
      * Initialises the StackQueueSort data structure
@@ -64,6 +65,7 @@ class StackQueue {
       this->initial_last_element.resize(N);
       this->buffer_containers.resize(Z);
       this->current_buffer_container_index = 0;
+      this->started_using_block.resize(N);
     }
 
     /**
@@ -204,6 +206,7 @@ class StackQueue {
        */
       container_type[primary_container] = QUEUE;
       container_type[secondary_container] = QUEUE;
+
       /**
        * We pick Z buffer containers.
        */
@@ -212,6 +215,7 @@ class StackQueue {
         buffer_containers[i] = next_best_container;
         is_container_used[next_best_container] = true;
       }
+
     }
 
     /**
@@ -262,7 +266,7 @@ class StackQueue {
 
     bool can_block_reisde_in_its_container(int block) {
       int container_for_block = get_container_for_block(block);
-      if (container[container_for_block].size() > 0) {
+      if (started_using_block[container_for_block] && container[container_for_block].size() > 0) {
         if (last(container_for_block) + total_useful_containers == block) {
           return true;
         } else if (last(container_for_block) == initial_last_element[container_for_block]) {
@@ -295,70 +299,96 @@ class StackQueue {
       for (int i = 0; i < N; i++) {
         while(initial_container_sizes[i] > 0 && container[i].size() > 0) {
           int block = current(i);
+          assert(block != INVALID_ELEMENT);
+          /**
+           * If its elibigle for a buffer block
+           */
           if (is_eligible_for_buffer_container(block)) {
-            int buffer_container_index = get_buffer_container_for_block(
-              block
-            );
+            int buffer_container_index = get_buffer_container_for_block(block);
+            /**
+             * We need to be careful of not pop_push on the same container
+             */
             if (i != buffer_container_index) {
-              pop_push(
-                i, buffer_container_index
-              );
-              // debug("Placing block %d in buffer_container %d\n", block, buffer_container_index);
+              pop_push(i, buffer_container_index);
             } else {
-              pop_push(i, secondary_container);
+              pop_push(i, secondary_container); // We will pick this up when we go through the secondary container
             }
           } else if (can_block_reisde_in_its_container(block)) {
-            int container_index = get_container_for_block(
-              block
-            );
+            int container_index = get_container_for_block(block);
+            /**
+             * We need to be careful of not pop_push on the same container
+             */
             if (i != container_index) {
-              pop_push(
-                i, container_index
-              );
+              pop_push(i, container_index);
+              started_using_block[container_index] = true;
             } else {
-              pop_push(
-                i, secondary_container
-              );
+              pop_push(i, secondary_container); // We will pick this up when we go through the secondary container
             }
           } else {
+            /**
+             * We need to be careful of not pop_push on the same container
+             */
             if (i == primary_container) {
               pop_push(i, secondary_container);
             } else {
               pop_push(i, primary_container);
             }
           }
+          /**
+           * We stop after we have processed all the elements which were there initially in that container
+           */
           if (block == initial_last_element[i]) break;
         }
       }
+      /**
+       * We left some of the blocks in secondary container. We process them also
+       */
       while(container[secondary_container].size() > 0) {
         int block = current(secondary_container);
         if (is_eligible_for_buffer_container(block)) {
-          // debug("Placing block %d in buffer_container %d\n", block, get_buffer_container_for_block(block));
           pop_push(
             secondary_container, get_buffer_container_for_block(block)
           );
+        } else if (can_block_reisde_in_its_container(block)) {
+          int container_index = get_container_for_block(block);
+          started_using_block[container_index] = true;
+          pop_push(secondary_container, container_index);
         } else {
           pop_push(secondary_container, primary_container);
         }
       }
+      assert(container[secondary_container].size() == 0);
       /**
-       * Now all the blocks are in the primary_container or secondary_container or already in their respective places.
+       * Now all the blocks are in the primary_container or buffer_containers or already in their respective places.
        */
       int current_primary = primary_container, current_secondary = secondary_container;
       while(container[current_primary].size() > 0) {
+        /**
+         * With each iteration we try to place some blocks present in the primary container onto their respective container.
+         * If they don't fall in place, we place them in the secondary container.
+         * If we are not able to push any blocks, we go to the buffer containers.
+         */
         int total_blocks_placed = 0;
         while(container[current_primary].size() > 0) {
           int block = current(current_primary);
+          assert(block != INVALID_ELEMENT);
           if (can_block_reisde_in_its_container(block)) {
+            started_using_block[get_container_for_block(block)] = true;
             pop_push(current_primary, get_container_for_block(block));
             total_blocks_placed += 1;
           } else {
             pop_push(current_primary, current_secondary);
           }
         }
+        /**
+         * At this point, the primary_container is empty and the secondary_container is full.
+         * So we swap them.
+         */
         swap(current_primary, current_secondary);
+        assert(container[current_secondary].size() == 0);
         if (total_blocks_placed == 0 || container[current_primary].size() == 0) {
-          for (auto buffer_container: buffer_containers) {
+          for (int i = 0; i < Z; i++) {
+            int buffer_container = buffer_containers[i];
             if (container[buffer_container].size() > 0) {
               while(container[buffer_container].size() != 0) {
                 pop_push(buffer_container, current_primary);
@@ -438,31 +468,63 @@ int main() {
   /**
    * Start of input.
    */
-  int N, B, C, D, W, M, A;
+  int N, B, C[MAX_CONTAINERS], D[MAX_CONTAINERS], W[MAX_BLOCKS], M, A[MAX_CONTAINERS][MAX_BLOCKS], container_sizes[MAX_CONTAINERS];
   scanf("%d %d", &N, &B);
-  StackQueue sq(N, B, 2);
   for (int i = 0; i < N; i++) {
-    scanf("%d", &C);
-    sq.set_container_properties(i, C, INVALID_COST);
+    scanf("%d", C + i);
   }
   for (int i = 0; i < N; i++) {
-    scanf("%d", &D);
-    sq.set_container_properties(i, INVALID_COST, D);
+    scanf("%d", D + i);
   }
   for (int i = 0; i < B; i++) {
-    scanf("%d", &W);
-    sq.set_block_properties(i, W);
+    scanf("%d", W + i);
   }
   for (int i = 0; i < N; i++) {
-    scanf("%d", &M);
-    for (int j = 0; j < M; j++) {
-      scanf("%d", &A);
-      sq.populate(i, A - 1);
+    scanf("%d", container_sizes + i);
+    for (int j = 0; j < container_sizes[i]; j++) {
+      scanf("%d", &A[i][j]);
+      A[i][j] -= 1;
     }
   }
+  int min_cost = INFINITY, min_cost_index = -1;
   /**
    * End of input.
    */
+  for (int num_buffer_containers = 0; num_buffer_containers < min(N/2, 6); num_buffer_containers++) {
+    StackQueue sq(N, B, num_buffer_containers);
+    for (int i = 0; i < N; i++) {
+      sq.set_container_properties(i, C[i], D[i]);
+    }
+    for (int i = 0; i < B; i++) {
+      sq.set_block_properties(i, W[i]);
+    }
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < container_sizes[i]; j++) {
+        sq.populate(i, A[i][j]);
+      }
+    }
+    sq.sort();
+    sq.verify_sorting();
+    if (sq.operation_costs < min_cost) {
+      min_cost = sq.operation_costs;
+      min_cost_index = num_buffer_containers;
+    }
+  }
+  /**
+   * Now that we have got the answer, we recompute the solution once again
+   */
+  StackQueue sq(N, B, min_cost_index);
+  for (int i = 0; i < N; i++) {
+    sq.set_container_properties(i, C[i], D[i]);
+  }
+  for (int i = 0; i < B; i++) {
+    sq.set_block_properties(i, W[i]);
+  }
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < container_sizes[i]; j++) {
+      sq.populate(i, A[i][j]);
+    }
+  }
   sq.sort();
   sq.verify_sorting();
   for (int i = 0; i < N; i++) {
