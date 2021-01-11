@@ -361,10 +361,16 @@ class StackQueue {
       while(container[secondary_container].size() > 0) {
         int block = current(secondary_container);
         if (is_eligible_for_buffer_container(block)) {
+          /**
+           * These are those block which moved from buffer containers here. Now they go back.
+           */
           pop_push(
             secondary_container, get_buffer_container_for_block(block)
           );
         } else if (can_block_reisde_in_its_container(block)) {
+          /**
+           * We can sneak in some blocks from the secondary container to its respective container.
+           */
           int container_index = get_container_for_block(block);
           started_using_block[container_index] = true;
           pop_push(secondary_container, container_index);
@@ -403,6 +409,7 @@ class StackQueue {
         swap(current_primary, current_secondary);
         assert(container[current_secondary].size() == 0);
         if (total_blocks_placed == 0 || container[current_primary].size() == 0) {
+          assert(container[primary_container].size() == 0);
           bool used_buffer_container = false;
           for (int i = 0; i < Z; i++) {
             int buffer_container = buffer_containers[i];
@@ -410,6 +417,9 @@ class StackQueue {
               while(container[buffer_container].size() != 0) {
                 int block = current(buffer_container);
                 if (can_block_reisde_in_its_container(block)) {
+                  /**
+                   * We can sneak in some blocks from the secondary container to its respective container.
+                   */
                   int container_index = get_container_for_block(block);
                   started_using_block[container_index] = true;
                   pop_push(buffer_container, container_index);
