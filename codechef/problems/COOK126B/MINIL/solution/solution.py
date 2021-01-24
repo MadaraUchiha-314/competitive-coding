@@ -7,22 +7,39 @@ if __name__ == "__main__":
         star_dot = [0 for _ in range(N)]
         for i in range(N):
             row = list(input())
-            cost_star_dot = 0
-            cost_dot_star = 0
+            matrix.append(row)
+        answer_dot = 0
+        answer_star = 0
+        for i in range(N):
             for j in range(M):
-                if j % 2 == 0:
-                    if row[j] == '.':
-                        cost_star_dot += 1
+                if i % 2 == 0:
+                    if j % 2 == 0:
+                        if matrix[i][j] == '*':
+                            answer_dot += 1
                     else:
-                        cost_dot_star += 1
+                        if matrix[i][j] == '.':
+                            answer_dot += 1
                 else:
-                    if row[j] == '.':
-                        cost_dot_star += 1
+                    if j % 2 == 1:
+                        if matrix[i][j] == '*':
+                            answer_dot += 1
                     else:
-                        cost_star_dot += 1
-            dot_star.append(cost_dot_star)
-            star_dot.append(cost_star_dot)
-        print(min(sum(dot_star), sum(star_dot)))
+                        if matrix[i][j] == '.':
+                            answer_dot += 1
                 
-
+                if i % 2 == 0:
+                    if j % 2 == 0:
+                        if matrix[i][j] == '.':
+                            answer_star += 1
+                    else:
+                        if matrix[i][j] == '*':
+                            answer_star += 1
+                else:
+                    if j % 2 == 1:
+                        if matrix[i][j] == '.':
+                            answer_star += 1
+                    else:
+                        if matrix[i][j] == '*':
+                            answer_star += 1
+        print(min(answer_dot, answer_star))
 
