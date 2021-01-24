@@ -35,3 +35,9 @@ touch "$solution_folder/solution.$language"
 # Create atleast one input and output file
 touch "$input_folder/input-0.txt"
 touch "$output_folder/output-0.txt"
+
+touch "$input_folder/input-1.txt"
+touch "$output_folder/output-1.txt"
+
+touch "$input_folder/input-2.txt"
+touch "$output_folder/output-2.txt"
