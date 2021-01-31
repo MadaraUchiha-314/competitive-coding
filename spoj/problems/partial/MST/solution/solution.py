@@ -4,9 +4,10 @@ class DisjointSet:
         self.size = [1 for _ in range(n)]
 
     def root(self, a):
-        if self.parent[a] == a:
-            return a
-        return self.root(self.parent[a])
+        while self.parent[a] != a:
+            self.parent[a] = self.parent[self.parent[a]]
+            a = self.parent[a]
+        return a
 
     def find(self, a, b):
         return self.root(a) == self.root(b)
