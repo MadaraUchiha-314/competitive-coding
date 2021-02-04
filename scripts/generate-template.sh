@@ -41,3 +41,5 @@ touch "$output_folder/output-1.txt"
 
 touch "$input_folder/input-2.txt"
 touch "$output_folder/output-2.txt"
+
+cd $problem_folder
