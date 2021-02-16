@@ -17,7 +17,6 @@ int main() {
   vector<int> sums(1005);
   scanf("%d", &T);
   while(T--) {
-    debug("========= Test case %d =========\n", T);
     scanf("%d %d %d", &N, &X, &Y);
     for (int i = 0; i < N; i++) {
       scanf("%d", A + i);
@@ -46,18 +45,6 @@ int main() {
         } else  if (x_pos != y_pos) {
           one_swap = true;
         }
-        debug("Arrays is \n");
-        for (int k = 0; k < N; k++) debug("%d ", A[k]);
-        debug("\n");
-        debug("Cumulative Arrays is \n");
-        for (int k = 0; k < N; k++) debug("%d ", sums[k]);
-        debug("\n");
-        debug("Swapping %d at %d and %d at %d.\n", A[i], i, A[j], j);
-        debug("New Cumulative Arrays is \n");
-        for (int k = 0; k < N; k++) debug("%d ", k >= i && k <j ? sums[k] + delta : sums[k]);
-        debug("\n");
-        debug("Searched for %d and %d\n", X - delta, Y - delta);
-        debug("Found %d at %d and %d at %d\n", X - delta, x_pos, Y - delta, y_pos);
       }
     }
     if (zero_swap) {
