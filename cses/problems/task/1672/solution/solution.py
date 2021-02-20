@@ -10,7 +10,6 @@ def floyd_warshall(N, dist):
 
 if __name__ == "__main__":
     N, M, Q = map(int, input().split())
-    g = [[] for _ in range(N)]
     dist = [[math.inf for _ in range(N)] for _ in range(N)]
     for _ in range(M):
         src, dest, weight = map(int, input().split())
@@ -21,9 +20,7 @@ if __name__ == "__main__":
     floyd_warshall(N, dist)
     for _ in range(Q):
         src, dest = map(int, input().split())
-        src -= 1
-        dest -= 1
-        if dist[src][dest] == math.inf:
+        if dist[src - 1][dest - 1] == math.inf:
             print("-1")
         else:
             print(dist[src][dest])

@@ -1,6 +1,6 @@
 /*
-* Problem Name/URL:
-*/
+ * Problem Name/URL:
+ */
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
