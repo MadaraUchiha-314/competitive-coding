@@ -6,6 +6,7 @@ output_folder_name="output"
 generators_folder_name="generators"
 solution_folder_name="solution"
 bin_folder_name="bin"
+templates_folder="templates"
 
 # Usage:
 # bash scripts/generate-template.sh codechef NOV20A RESTORE py
@@ -16,6 +17,7 @@ platform=$1
 contest_id=$2
 problem_id=$3
 language=$4
+template=$5
 
 contest_folder="$platform/$problems_base_folder_name/$contest_id"
 problem_folder="$contest_folder/$problem_id"
@@ -41,5 +43,9 @@ touch "$output_folder/output-1.txt"
 
 touch "$input_folder/input-2.txt"
 touch "$output_folder/output-2.txt"
+
+if [ -n "$template" ]; then
+   cp "$templates_folder/$language/$template.$language" "$solution_folder/solution.$language"
+fi
 
 cd $problem_folder

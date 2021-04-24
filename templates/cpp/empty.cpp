@@ -1,7 +1,9 @@
 /*
  * Problem Name/URL: 
  */
+
 #include <cstdio>
+#include <iostream>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
@@ -38,12 +40,15 @@ using namespace std;
 #define spll(x, y) scanf("%lld %lld", &x, &y)
 
 #define pf printf
-#define pd(x) printf("%d", x)
-#define pll(x) printf("%lld", x)
-#define ppd(x, y) printf("%d %d", &x, &y)
-#define ppll(x, y) printf("%lld %lld", &x, &y)
-#define pnl() printf("\n")
-#define psp() printf(" ")
+#define pd(x) pf("%d", x)
+#define pll(x) pf("%lld", x)
+#define ppd(x, y) pf("%d %d", &x, &y)
+#define ppll(x, y) pf("%lld %lld", &x, &y)
+#define pnl() pf("\n")
+#define psp() pf(" ")
+#define pvd(x) for (auto e: x) pd(e), psp()
+#define pvll(x) for (auto e: x) pdd(e), psp()
+#define pvpd(x) for (auto e: x) pf("%")
 
 /**
  * Loops
