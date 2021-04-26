@@ -35,13 +35,13 @@ using namespace std;
  * Overloading ostream for Pairs, Vectors, Maps
  */
 template <typename T, typename U>
-ostream& operator<< (ostream& os, pair<T, U> x) { os << ROB_O << x.first << SPACE << x.second << ROB_C; }
+ostream& operator<< (ostream& os, pair<T, U> x) { os << ROB_O << x.first << SPACE << x.second << ROB_C; return os; }
 
 template <typename T>
-ostream& operator<< (ostream& os, vector<T> x) { os << SQB_O; for (auto e: x) os << e << COMMA << SPACE; os << SQB_C << NEW_LINE; }
+ostream& operator<< (ostream& os, vector<T> x) { os << SQB_O; for (auto e: x) os << e << COMMA << SPACE; os << SQB_C << NEW_LINE; return os; }
 
 template <typename T, typename U>
-ostream& operator<< (ostream& os, map<T, U> x) { os << CYB_O << NEW_LINE; for (auto e: x) os << e << COLON << SPACE << x[e] << NEW_LINE; os << CYB_C << NEW_LINE; }
+ostream& operator<< (ostream& os, map<T, U> x) { os << CYB_O << NEW_LINE; for (auto e: x) os << e << COLON << SPACE << x[e] << NEW_LINE; os << CYB_C << NEW_LINE; return os; }
 
 /**
  * Defining min and max for multiple arguments.
