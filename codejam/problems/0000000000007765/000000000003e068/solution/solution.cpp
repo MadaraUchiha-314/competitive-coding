@@ -1,5 +1,5 @@
 /*
- * Problem Name/URL: 
+ * Problem Name/URL: https://codingcompetitions.withgoogle.com/codejam/round/0000000000007765/000000000003e068
  */
 
 #include <iostream>
@@ -69,9 +69,42 @@ void solve();
 /**
  * Problem Specific Stuff
  */
-
+int N, D;
+int flavor;
+vector<int> preferences;
+vector<int> frequencies(200);
+vector<bool> availability(200);
 
 void solve() {
+  for (int i = 0; i < N; i++) {
+    cin >> D;
+    assert(D != -1);
+    for (int j = 0; j < D; j++) {
+      cin >> flavor;
+      preferences.push_back(flavor);
+      frequencies[flavor] += 1;
+    }
+    int most_preferred_count = (int) 1e9, most_preferred_candy = -1;
+    for (int j = 0; j < D; j++) {
+      int preference = preferences[j];
+      if (availability[preference]) {
+        if (frequencies[preference] < most_preferred_count) {
+          most_preferred_count = frequencies[preference];
+          most_preferred_candy = preference;
+        }
+      }
+    }
+    if (most_preferred_candy != -1) {
+      frequencies[most_preferred_candy] -= 1;
+      availability[most_preferred_candy] = false;
+      cout << most_preferred_candy << "\n";
+      cout.flush();
+    } else {
+      cout << "-1" << "\n";
+      cout.flush();
+    }
+    preferences.clear();
+  }
 }
 
 int main () {
@@ -91,4 +124,9 @@ int main () {
 }
 
 void input() {
+  cin >> N;
+  for (int i = 0; i < N; i++) {
+    availability[i] = true;
+    frequencies[i] = 0;
+  }
 }
