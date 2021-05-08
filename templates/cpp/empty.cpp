@@ -1,23 +1,7 @@
 /*
  * Problem Name/URL: 
  */
-
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <stack>
-#include <utility>
-#include <functional>
-#include <limits>
-#include <map>
-#include <set>
-#include <iterator>
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cmath>
-
+#include <bits/stdc++.h>
 using namespace std;
 
 #define NEW_LINE "\n"
@@ -35,7 +19,7 @@ using namespace std;
  * Overloading ostream for Pairs, Vectors, Maps
  */
 template <typename T, typename U>
-ostream& operator<< (ostream& os, pair<T, U> x) { os << ROB_O << x.first << SPACE << x.second << ROB_C; return os; }
+ostream& operator<< (ostream& os, pair<T, U> x) { os << ROB_O << x.first << COMMA << SPACE << x.second << ROB_C; return os; }
 
 template <typename T>
 ostream& operator<< (ostream& os, vector<T> x) { os << SQB_O; for (auto e: x) os << e << COMMA << SPACE; os << SQB_C << NEW_LINE; return os; }
