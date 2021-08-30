@@ -1,5 +1,5 @@
 /*
- * Problem Name/URL: https://www.facebook.com/codingcompetitions/hacker-cup/2021/qualification-round/problems/A2
+ * Problem Name/URL: https://www.facebook.com/codingcompetitions/hacker-cup/2021/qualification-round/problems/C1
  */
 #include <bits/stdc++.h>
 using namespace std;
@@ -60,41 +60,32 @@ void solve();
 /**
  * Problem Specific Stuff
  */
-string S;
-int K;
-string r;
-vector<vector<int>> dist(26, vector<int>(26));
+int N;
+vector<int> coins;
+vector<vector<int>> tree;
+int child_to_ignore = -1;
 
-const int INF = 1e5;
+const int ROOT = 0;
+
+int dfs(int root, int parent, int ignore_child) {
+  int max_coins_child = -1, max_coins = 0;
+  for (auto child: tree[root]) {
+    if (child != parent && child != ignore_child) {
+      int coins_collected = dfs(child, root, ignore_child);
+      if (coins_collected > max_coins) {
+        max_coins = coins_collected;
+        max_coins_child = child;
+      }
+    }  
+  }
+  if (root == ROOT) {
+    child_to_ignore = max_coins_child;
+  }
+  return max_coins + coins[root];
+}
 
 void solve() {
-    for (int k = 0; k < 26; k++) {
-        for (int i = 0; i < 26; i++) {
-            for (int j = 0; j < 26; j++) {
-                dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
-            }
-        }
-    }
-    int min_cost = 1e9;
-    bool possible = false;
-    for (int i = 0; i < 26; i++) {
-        int cost = 0;
-        bool convert_to_ith = true;
-        for (char c: S) {
-            if (c - 'A' == i) continue;
-            if (dist[c - 'A'][i] != INF) {
-                cost += dist[c - 'A'][i];
-            } else {
-                convert_to_ith = false;
-                break;
-            } 
-        }
-        if (convert_to_ith ){
-            min_cost = min(min_cost, cost);
-            possible = true;
-        }
-    }
-    cout << (possible ? min_cost : -1) << "\n";
+  cout << dfs(ROOT, -1, -1) + dfs(ROOT, -1, child_to_ignore)  - coins[ROOT] << "\n";
 }
 
 int main () {
@@ -115,20 +106,21 @@ int main () {
 }
 
 void input() {
-    for (int i = 0; i < 26; i++) {
-        for (int j = 0; j < 26; j++) {
-            if (i == j) {
-                dist[i][j] = 0;
-            }  
-            else {
-                dist[i][j] = INF;
-            }
-        }
-    }
-    cin >> S;
-    cin >> K;
-    for (int i = 0; i < K; i++) {
-        cin >> r;
-        dist[r[0] - 'A'][r[1] - 'A'] = 1;
-    }
+  cin >> N;
+
+  int src, dest;
+  tree.clear();
+  coins.clear();
+  tree.resize(N);
+  coins.resize(N);
+
+  for (int i = 0; i < N; i++) {
+    cin >> coins[i];
+  }
+  for (int i = 0; i < N - 1; i++) {
+    cin >> src >> dest;
+    src--; dest--;
+    tree[src].push_back(dest);
+    tree[dest].push_back(src);
+  }
 }
