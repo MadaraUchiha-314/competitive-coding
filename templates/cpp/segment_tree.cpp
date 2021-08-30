@@ -1,9 +1,13 @@
+/**
+ * Segment Tree
+ */
 namespace SegmentTree {
+  
   #define middle(l, r) (l + r) / 2
   #define left_child(current) 1 + (current << 1)
   #define right_child(current) 2 + (current << 1)
-  
-  template <typename Item, typename Node, Node create_node(Item), Node combine_nodes(Node, Node), Node Identity>
+
+  template <typename Item, typename Node, Node create_node(Item), Node combine_nodes(Node, Node), Node update_node(Node, Item), Node Identity>
   class SegTree {
     private:
       int N;
@@ -36,6 +40,20 @@ namespace SegmentTree {
         );
       }
 
+      void update(int index, int value, int current, int left, int right) {
+        int mid = middle(left, right);
+        if (left == right) {
+          tree[current] = update_node(tree[current], value);
+        } else {
+          if (index <= mid) {
+            update(index, value, left_child(current),left, mid);
+          } else {
+            update(index, value, right_child(current), mid + 1, right);
+          }
+          tree[current] = combine_nodes(tree[left_child(current)], tree[right_child(current)]);
+        }
+      }
+
      public:
       SegTree(vector<Item>& nodes) {
         N = nodes.size();
@@ -43,8 +61,12 @@ namespace SegmentTree {
         create(nodes, 0, N - 1, 0);
       }
       
-      Node query(int l, int r) {
-        return query(l, r, 0, 0, N - 1);
+      Node query(int left, int right) {
+        return query(left, right, 0, 0, N - 1);
+      }
+
+      void update(int index, int value) {
+        update(index, value, 0, 0, N - 1);
       }
   };
 }
