@@ -4,32 +4,21 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#define NEW_LINE "\n"
-#define SPACE " "
-#define COMMA ","
-#define COLON ":"
-#define SQB_O "["
-#define SQB_C "]"
-#define CYB_O "{"
-#define CYB_C "}"
-#define ROB_O "("
-#define ROB_C ")"
-
 /**
  * Overloading ostream for Pairs, Vectors, Maps
  */
 template <typename T, typename U>
-ostream& operator<< (ostream& os, pair<T, U> x) { os << ROB_O << x.first << COMMA << SPACE << x.second << ROB_C; return os; }
+ostream& operator<< (ostream& os, pair<T, U> x) { os << "(" << x.first << "," << " " << x.second << ")"; return os; }
 
 template <typename T>
-ostream& operator<< (ostream& os, vector<T> x) { os << SQB_O; for (auto e: x) os << e << COMMA << SPACE; os << SQB_C << NEW_LINE; return os; }
+ostream& operator<< (ostream& os, vector<T> x) { os << "["; for (auto e: x) os << e << "," << " "; os << "]" << "\n"; return os; }
 
 template <typename T, typename U>
-ostream& operator<< (ostream& os, map<T, U> x) { os << CYB_O << NEW_LINE; for (auto e: x) os << e << COLON << SPACE << x[e] << NEW_LINE; os << CYB_C << NEW_LINE; return os; }
+ostream& operator<< (ostream& os, map<T, U> x) { os << "{" << "\n"; for (auto e: x) os << e << ":" << " " << x[e] << "\n"; os << "}" << "\n"; return os; }
 
 #define DEBUG true
 #if DEBUG
-  #define trace(x, y) cout << x << COLON << SPACE << y << NEW_LINE;
+  #define trace(x, y) cout << x << ":" << " " << y << "\n";
 #else
   #define trace(x, y) 1
 #endif
