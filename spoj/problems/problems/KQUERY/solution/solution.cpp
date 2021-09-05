@@ -54,9 +54,9 @@ namespace SegmentTree {
     typename Node,
     typename QueryTerm,
     typename QueryResult,
-    Node create_node(Item),
+    Node create_node(Item&),
     Node combine_nodes(Node&, Node&),
-    void update_node(Node&, Item),
+    void update_node(Node&, Item&),
     QueryResult query_node(Node& node, QueryTerm& query_term),
     QueryResult combine_queries(QueryResult& q1, QueryResult& q2),
     Node& Identity
@@ -91,7 +91,7 @@ namespace SegmentTree {
         return combine_queries(left_query, right_query);
       }
 
-      void update(int index, int value, int current, int left, int right) {
+      void update(int index, Node& value, int current, int left, int right) {
         int mid = middle(left, right);
         if (left == right) {
           tree[current] = update_node(tree[current], value);
@@ -116,7 +116,7 @@ namespace SegmentTree {
         return query(left, right, 0, 0, N - 1, query_term);
       }
 
-      void update(int index, int value) {
+      void update(int index, Item& value) {
         update(index, value, 0, 0, N - 1);
       }
   };
@@ -131,7 +131,7 @@ void solve();
  * Problem Specific Stuff
  */
 
-vector<long long> create_node(long long value) {
+vector<long long> create_node(long long& value) {
   vector<long long> node(1, value);
   return node;
 }
@@ -155,7 +155,7 @@ vector<long long> combine_nodes(vector<long long>& left, vector<long long>& righ
   return combined;
 }
 
-void update_node(vector<long long>& current, long long value) {
+void update_node(vector<long long>& current, long long& value) {
   current[0] = value;
 }
 
@@ -173,9 +173,19 @@ int N, Q;
 vector<long long> arr;
 vector<pair<pair<int, int>, int>> queries;
 
-
 void solve() {
-  SegTree<long long, vector<long long>, long long, long long, create_node, combine_nodes, update_node, query_node, combine_queries, identity> s(arr);
+  SegTree<
+    long long,
+    vector<long long>, 
+    long long,
+    long long,
+    create_node,
+    combine_nodes,
+    update_node,
+    query_node,
+    combine_queries,
+    identity
+  > s(arr);
   for (auto query: queries) {
     auto range = query.first;
     auto value = query.second;
