@@ -56,8 +56,8 @@ void solve() {
   int sum = (A - M) / (N - 1);
   int total = M;
   for (int i = 0; i < N - 1; i++) {
-    mat[i][0] = sum;
-    total += sum;
+    mat[i][0] = 1;
+    total += 1;
   }
   if (total < A) {
     mat[0][0] += A - total;
@@ -66,8 +66,8 @@ void solve() {
   sum = (B - M) / (N - 1);
   total = M;
  for (int i = 0; i < N - 1; i++) {
-    mat[i][M - 1] = sum;
-    total += sum;
+    mat[i][M - 1] = 1;
+    total += 1;
   }
   if (total < B) {
     mat[0][M - 1] += B - total;
@@ -75,13 +75,8 @@ void solve() {
   for (int i = 0; i < M; i ++) {
     mat[N - 1][i] = 1;
   }
-  bool possible = true;
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < M; j++) {
-      if (mat[i][j] <= 0) possible = false;
-    }
-  }
-  if (!possible) cout << "Impossible" << "\n";
+
+  if (A < (N + M - 1) || B < (N + M - 1)) cout << "Impossible" << "\n";
   else {
     cout << "Possible" << "\n";
     for (int i = 0; i < N; i++) {
