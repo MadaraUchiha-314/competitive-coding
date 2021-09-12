@@ -49,9 +49,71 @@ void solve();
 /**
  * Problem Specific Stuff
  */
-
+int N, M, A, B;
+vector<vector<int>> mat(50, vector<int>(50, 1000));
 
 void solve() {
+  int sum = A / (N + M - 1);
+  int total = 0;
+  // 1st column
+  for (int i = 0; i < N; i++) {
+    mat[i][0] = sum;
+    total += sum;
+  }
+  // last row
+  for (int j = 1; j < M; j++) {
+    mat[N - 1][j] = sum;
+    total += sum;
+  }
+  if (total < A) {
+    mat[0][0] += A - total;
+  }
+  sum = (B - (M * sum)) / (N - 1);
+  total = 0;
+  // last column
+  for (int i = 0; i < N - 1; i++) {
+    mat[i][M - 1] = sum;
+    total += sum;
+  }
+  // Adding up the last row
+  for (int i = 0; i < M; i++) {
+    total += mat[N - 1][i];
+  }
+  if (total < B) {
+    mat[0][M - 1] += B - total;
+  }
+  bool possible = true;
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < M; j++) {
+      if (mat[i][j] <= 0) possible = false;
+    }
+  }
+  if (!possible) cout << "Impossible" << "\n";
+  else {
+    cout << "Possible" << "\n";
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < M; j++) {
+        cout << mat[i][j] << " ";
+      }
+      cout << "\n";
+    }
+    // Asserting Everything is ok.
+    int sum_a = 0, sum_b = 0;
+    for (int i = 0; i < N; i++) {
+      sum_a += mat[i][0];
+      sum_b += mat[i][M -1];
+    }
+    for (int i = 1; i < M; i++) {
+      sum_a += mat[N - 1][i];
+      sum_b += mat[N - 1][M - i - 1];
+    }
+    if (sum_a != A || sum_b != B) {
+      cout << A << " " << B << " " << sum_a << " " << sum_b << "\n";
+      assert(false);
+    }
+  }
+  
+
 }
 
 int main () {
@@ -65,10 +127,17 @@ int main () {
   cin >> T;
   for (int t = 0; t < T; t++) {
     input();
+    pcodejam(t + 1);
     solve();
   }
   return 0;
 }
 
 void input() {
+  cin >> N >> M >> A >> B;
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < M; j++) {
+      mat[i][j] = 1000;
+    }
+  }
 }
