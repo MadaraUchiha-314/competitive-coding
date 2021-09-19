@@ -50,7 +50,7 @@ namespace SegmentTree {
       void update(int index, Node& value, int current, int left, int right) {
         int mid = middle(left, right);
         if (left == right) {
-          tree[current] = update_node(tree[current], value);
+          update_node(tree[current], value);
         } else {
           if (index <= mid) {
             update(index, value, left_child(current),left, mid);
