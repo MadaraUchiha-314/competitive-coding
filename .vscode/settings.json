@@ -10,6 +10,9 @@
         "map": "cpp",
         "memory": "cpp",
         "regex": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "__locale": "cpp",
+        "chrono": "cpp",
+        "variant": "cpp"
     }
 }
