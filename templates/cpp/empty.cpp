@@ -5,6 +5,11 @@
 using namespace std;
 
 void input();
+
+/**
+ * Problem Specific Stuff
+ */
+
 void solve() {
 }
 

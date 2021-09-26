@@ -13,6 +13,10 @@
         "span": "cpp",
         "__locale": "cpp",
         "chrono": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "random": "cpp",
+        "bitset": "cpp",
+        "fstream": "cpp",
+        "functional": "cpp"
     }
 }
