@@ -17,6 +17,8 @@
         "random": "cpp",
         "bitset": "cpp",
         "fstream": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "algorithm": "cpp",
+        "limits": "cpp"
     }
 }
