@@ -1,5 +1,5 @@
 /*
- * Problem Name/URL: 
+ * Problem Name/URL: https://cses.fi/problemset/task/2101/
  */
 #include <bits/stdc++.h>
 using namespace std;
@@ -55,15 +55,16 @@ inline int inv(int a, int mod) { return power(a, mod - 2, mod); }
 void input();
 void solve();
 
+template <typename T>
 class PersistentArray {
   public:
-    vector<vector<pair<int, int>>> arr;
+    vector<vector<pair<int, T>>> arr;
     
     PersistentArray() {}
 
     PersistentArray(int n) { arr.resize(n); }
 
-    PersistentArray(vector<int>& initial_array) {
+    PersistentArray(vector<T>& initial_array) {
       arr.resize(initial_array.size());
       for (int i = 0; i < initial_array.size(); i++) {
         arr[i].push_back({ 0, initial_array[i] });
@@ -72,7 +73,7 @@ class PersistentArray {
 
     void resize(int n) { arr.resize(n); }
 
-    void resize(int n, int a) {
+    void resize(int n, T a) {
       arr.resize(n);
       for (int i = 0; i < n; i++) {
         arr[i].push_back({ 0, a });
@@ -81,13 +82,11 @@ class PersistentArray {
 
     void clear() { arr.clear(); }
 
-    void set(int item, int index, int time) { arr[index].push_back({ time, item }); }
+    void push_back(T item, int index, int time) { arr[index].push_back({ time, item }); }
 
-    int last_at(int index) { return arr[index].back().second; }
-
-    int at(int index, int time) {
+    T at(int index, int time) {
       return prev(
-        upper_bound(arr[index].begin(), arr[index].end(), make_pair(time, numeric_limits<int>::max()))
+        upper_bound(arr[index].begin(), arr[index].end(), make_pair(time, numeric_limits<T>::max()))
       )->second;
     }
 };
@@ -95,13 +94,13 @@ class PersistentArray {
 
 class PersistentDisjointSet {
   public:
-    PersistentArray parent;
-    PersistentArray size;
+    PersistentArray<int> parent;
+    PersistentArray<int> size;
 
     PersistentDisjointSet(int n) {
       parent.resize(n);
       size.resize(n, 1);
-      for (int i = 0; i < n; i++) parent.set(i, i, 0);
+      for (int i = 0; i < n; i++) parent.push_back(i, i, 0);
     }
 
     int root(int a, int t) {
@@ -119,12 +118,12 @@ class PersistentDisjointSet {
     void merge(int a, int b, int t) {
       int root_a = root(a, t); int root_b = root(b, t);
       if (root_a != root_b) {
-         if (size.last_at(root_a) < size.last_at(root_b)) {
-          parent.set(parent.last_at(root_b), root_a, t);
-          size.set(size.last_at(root_b) + size.last_at(root_a), root_b, t);
+         if (size.at(root_a, t) < size.at(root_b, t)) {
+          parent.push_back(parent.at(root_b, t), root_a, t);
+          size.push_back(size.at(root_b, t) + size.at(root_a, t), root_b, t);
         } else {
-          parent.set(parent.last_at(root_a), root_b, t);
-          size.set(size.last_at(root_a) + size.last_at(root_b), root_a, t);
+          parent.push_back(parent.at(root_a, t), root_b, t);
+          size.push_back(size.at(root_a, t) + size.at(root_b, t), root_a, t);
         }
       }
     }
