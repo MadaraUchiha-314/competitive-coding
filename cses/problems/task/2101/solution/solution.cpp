@@ -84,11 +84,11 @@ class PersistentArray {
 
     void push_back(T item, int index, int time) { arr[index].push_back({ time, item }); }
 
-    T at(int index, int time) {
-      return prev(
-        upper_bound(arr[index].begin(), arr[index].end(), make_pair(time, numeric_limits<T>::max()))
-      )->second;
-    }
+    T& at(int index) { return arr[index].back().second; }
+
+    T& at(int index, int time) { return prev(upper_bound(arr[index].begin(), arr[index].end(), make_pair(time, numeric_limits<T>::max())))->second; }
+
+    T& operator[] (unsigned int index) { return arr[index].back().second; }
 };
 
 
@@ -103,27 +103,21 @@ class PersistentDisjointSet {
       for (int i = 0; i < n; i++) parent.push_back(i, i, 0);
     }
 
-    int root(int a, int t) {
-      int temp = a;
-      while (parent.at(a, t) != a) {
-        a = parent.at(a, t);
-      }
-      return a;
-    }
+    int root(int a, int t) { while (parent.at(a, t) != a) a = parent.at(a, t); return a; }
 
-    int find(int a, int b, int t) {
-      return root(a, t) == root(b, t);
-    }
+    int root(int a) { while (parent[a] != a) a = parent[a]; return a; }
+
+    int find(int a, int b, int t) { return root(a, t) == root(b, t); }
 
     void merge(int a, int b, int t) {
-      int root_a = root(a, t); int root_b = root(b, t);
+      int root_a = root(a); int root_b = root(b);
       if (root_a != root_b) {
-         if (size.at(root_a, t) < size.at(root_b, t)) {
-          parent.push_back(parent.at(root_b, t), root_a, t);
-          size.push_back(size.at(root_b, t) + size.at(root_a, t), root_b, t);
+         if (size[root_a] < size[root_b]) {
+          parent.push_back(parent[root_b], root_a, t);
+          size.push_back(size[root_b] + size[root_a], root_b, t);
         } else {
-          parent.push_back(parent.at(root_a, t), root_b, t);
-          size.push_back(size.at(root_a, t) + size.at(root_b, t), root_a, t);
+          parent.push_back(parent[root_a], root_b, t);
+          size.push_back(size[root_a] + size[root_b], root_a, t);
         }
       }
     }
