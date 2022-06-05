@@ -27,8 +27,7 @@ int cost(int i, int j) {
   }
   int next = current + 1;
   if (lookup[next].size() == 0) {
-    memo[i][j] = INF;
-    return memo[i][j];
+    return INF;
   }
   int min_cost = INF;
   for (auto [x, y]: lookup[next]) {
@@ -37,7 +36,7 @@ int cost(int i, int j) {
     min_cost = min(min_cost, abs(i - x) + abs(j - y) + cost_to_next);
   }
   memo[i][j] = min_cost;
-  return memo[i][j];
+  return min_cost;
 }
 
 
