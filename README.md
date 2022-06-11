@@ -36,3 +36,5 @@ A list of useful resources for competitive coding
 	    1. https://codeforces.com/blog/entry/12239
 	    2. https://blog.anudeep2011.com/heavy-light-decomposition/
 	    3. https://discuss.codechef.com/t/tutorial-heavy-light-decomposition/69423/17
+7. Lecture Series
+	1. [MIT 6.006](https://www.youtube.com/playlist?list=PLUl4u3cNGP63EdVPNLG3ToM6LaEUuStEY)
