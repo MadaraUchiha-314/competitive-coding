@@ -36,4 +36,4 @@ if __name__ == "__main__":
     random.seed(1729)
     total_cases = 10
     # Generate test files
-    generate_test_files("intuit/problems/interview/ROBBER-ON-TREE", total_cases)
+    generate_test_files("", total_cases)
